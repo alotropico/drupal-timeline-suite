@@ -1,0 +1,4 @@
+name = Wikidata importer
+description = Gets content from Wikidata and saves it with entities and relations.
+core = 7.x
+version = "7.x-1.0"

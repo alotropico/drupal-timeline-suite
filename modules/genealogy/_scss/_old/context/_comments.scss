@@ -1,0 +1,192 @@
+.links.inline{
+    font-size: $font-min;
+    text-align: right;
+    padding: $m;
+    
+    li{
+        display: inline-block;
+    } 
+}
+
+.comment-wrapper{
+    
+    margin: $m*3 0 $m;
+    
+    h2{
+        line-height: 1;
+        margin-bottom: $m/2;
+        font-weight: bold;
+    }
+    
+    .comment-form{
+        border: 1px solid $grey;
+        @include border-radius(3px);
+        margin-bottom: $m;
+        
+        &>div{
+            display: table;
+            width: 100%;
+        }
+        
+        .form-item{
+            margin: 0;
+            padding: 0;
+            label{
+                display: none;
+            }
+        }
+        
+        h4, .field-name-field-attachment, .field-type-text-long, .form-actions{
+            display: table-cell;
+            padding: $m/2;
+            vertical-align: middle;
+            text-align: center;
+        }
+        
+        h4{
+        }
+        
+        .field-name-field-attachment, .field-type-text-long{
+        }
+        .form-actions{
+            text-align: right;
+            
+            .form-submit{
+                cursor: pointer;
+            }
+        }
+        //
+        
+        textarea{
+            border: 1px solid $grey;
+            width: 100%;
+            //height: 42px;
+            resize: none;
+            margin: 0;
+            padding: $m/2;
+            //@include border-radius(3px);
+            display: block;
+        }
+    }
+    .comment{
+        margin: $m*3 3px $m;
+        padding: 0;
+        
+        .picture{
+            //text-align: center;
+            font-size: $font-min;
+            padding: 0 $m $m 0;
+            float: left;
+            width: 72px;
+            
+            img{
+                max-width: 100%;
+                height: auto;
+                display: block;
+                margin: 0 auto $m;
+            }
+        }
+        
+        .content{
+            overflow: hidden;
+            
+            .submitted{
+                margin-bottom: $m/2;
+                font-weight: bold;
+                color: $darkish;
+                //font-size: $font-medium;
+                
+                a{
+                    text-decoration: none;
+                }
+                
+                .username{
+                    color: $darker;
+                }
+                
+                .date{
+                    display: inline-block;
+                    margin-left: $m/3;
+                }
+            }
+        }
+    }
+    
+    .field-name-comment-body{
+        font-size: 120%;
+        line-height: 1.4;
+        margin: 0 0 $m*0.75;
+    }
+    
+    .file{
+        &.file-video{
+            position: relative;
+            padding-top: 62%;
+            
+            iframe{
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                display: block;
+            }
+        }
+    }
+    
+    .rate-widget{
+        padding: $m 0;
+        //text-align: center;
+        
+        .item-list{
+            display: inline-block;
+        }
+        
+        ul{
+            margin: 0;
+            padding: 0;
+            display: inline-block;
+        }
+        
+        li{
+            display: inline-block;
+            padding: 0;
+            margin: 0;
+            margin-right: $m/2;
+        }
+        a, span{
+            text-decoration: none;
+            //font-size: $font-small;
+            display: block;
+            @include border-radius(3px);
+            width: $m*3;
+            line-height: $m*2.8;
+            font-weight: bold;
+            text-align: center;
+            border: 1px solid $darkish;
+            color: $darkish;
+            
+            &.user-voted{
+                border-color: $darker;
+                color: $darker;
+            }
+        }
+        
+        .rate-info{
+            display: inline-block;
+            vertical-align: middle;
+        }
+    }
+    
+    .indented{
+        margin-left: 72px;
+        
+        .comment-wrapper .comment .picture{
+            width: 48px;
+        }
+    }
+}
+.comment_forbidden{
+    border: 1px solid $grey;
+    padding: $m;
+}

@@ -1,0 +1,49 @@
+<?php
+/**
+ * @file
+ * Install, update, and uninstall functions for the discrete_date module.
+ */
+
+/**
+ * Implements hook_field_schema().
+ *
+ * Defines the database schema of the field, using the format used by the
+ * Schema API.
+ *
+ * The data we will store here is just one 7-character element, even
+ * though the widget presents the three portions separately.
+ *
+ * All implementations of hook_field_schema() must be in the module's
+ * .install file.
+ *
+ * @see http://drupal.org/node/146939
+ * @see schemaapi
+ * @see hook_field_schema()
+ * @ingroup discrete_date
+ */
+function discrete_date_field_schema($field) {
+  $columns = array(
+    'year' => array('type' => 'float', 'length' => 'big', 'not null' => FALSE),
+    'month' => array('type' => 'int', 'length' => 'tiny', 'not null' => FALSE),
+    'day' => array('type' => 'int', 'length' => 'tiny', 'not null' => FALSE),
+    'hours' => array('type' => 'int', 'length' => 'tiny', 'not null' => FALSE),
+    'minutes' => array('type' => 'int', 'length' => 'tiny', 'not null' => FALSE),
+    'seconds' => array('type' => 'int', 'length' => 'tiny', 'not null' => FALSE),
+    'precision' => array('type' => 'int', 'length' => 'tiny', 'not null' => FALSE), // 0 (billion years) to 14 (seconds)
+    'timetype' => array('type' => 'varchar', 'length' => 255, 'not null' => FALSE), // Wikidata Property
+  );
+  $indexes = array(
+    'year' => array('year'),
+    'month' => array('month'),
+    'day' => array('day'),
+    'hours' => array('hours'),
+    'minutes' => array('minutes'),
+    'seconds' => array('seconds'),
+    'precision' => array('precision'),
+    'timetype' => array('timetype'),
+  );
+  return array(
+    'columns' => $columns,
+    'indexes' => $indexes,
+  );
+}

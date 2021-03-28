@@ -1,0 +1,167 @@
+@import "base";
+
+body{
+    overflow: hidden;
+    overflow-y: scroll;
+}
+
+article{
+    
+    .l-wrap-min{
+        @extend %clear;
+    }
+    .l-wrap-full{
+        //
+    }
+    .w-top{
+        @extend %clear;
+        padding-bottom: $m*3;
+    }
+    
+    .tao-box{
+        padding-top: $m/2;
+        
+        @media #{$tablet} {
+            display: table;
+        }
+    }
+    
+    .tao-box-stuff{
+        padding: $m 0;
+        
+        @media #{$tablet} {
+            display: table-cell;
+            vertical-align: top;
+        }
+    }
+
+    h1.title{
+        font-size: 140%;
+        margin: 0 0 $m/3;
+        padding: 0;
+        letter-spacing: .04em;
+        line-height: 1;
+        
+        a{
+            color: $darker;
+            text-decoration: none;
+            font-size: 80%;
+        }
+        //color: white;
+    }
+    
+    .field-name-field-picture{
+        position: relative;
+        padding-right: $m;
+        
+        @media #{$tablet} {
+            display: table-cell;
+            vertical-align: top;
+            
+            .content{
+                padding: 1em;
+            }
+        }
+        
+        img{
+            display: block;
+            max-height: 220px;
+            max-width: 160px;
+            min-width: 16px;
+            width: auto;
+            height: auto;
+            background: white;
+        }
+    }
+    
+    h3.subtitle{
+        margin: $m*1.5 0 0;
+        
+        font-size: $font-medium;
+        
+        em{
+            color: white;
+        }
+        
+        p{
+            &:after{
+                content: '.';
+                display: inline;
+            }
+            &:first-letter{
+                text-transform: uppercase;
+            }
+        }
+    }
+    
+    .field-name-field-body{
+        overflow: hidden;
+        max-width: 400px;
+        line-height: 1.4;
+        color: #797979;
+        font-size: $font-medium;
+        
+        p{
+            &:after{
+                content: '.';
+                display: inline;
+            }
+            &:first-letter{
+                text-transform: uppercase;
+            }
+        }
+    }
+
+    .field-name-field-wikipedia-brief{
+        
+        border-bottom: 1px solid #efefef;
+        padding: .5em 0 1em;
+        display: inline-block;
+        
+        p{
+            font-family: $font2;
+            margin: 0 0 $m*1.5;
+            line-height: 1.7;
+            font-size: 115%;
+        }
+    }
+    .w-credit{
+        float: right;
+        font-size: $font-small;
+    }
+    
+    .w-quicknode{
+        overflow: hidden;
+    }
+    
+    .w-box-status{
+        overflow: hidden;
+        line-height: 2;
+        margin: $m 0;
+        font-size: $font-small;
+        padding-left: .2em;
+    }
+    
+    h4{
+        font-size: $font-min;
+        padding: $m/2 0 $m;
+    }
+    
+    .field-name-field-parents, .field-name-field-influences, .field-name-field-related{
+        @extend %clear;
+        
+        .field-items{
+            //
+        }
+        .field-item{
+            display: inline-block;
+            margin-right: .5em;
+        }
+    }
+
+    .w-footer{
+        border-top: 1px solid $light;
+        padding-top: $m*2;
+        padding-bottom: $m*2;
+    }
+}

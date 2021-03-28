@@ -1,0 +1,35 @@
+name = Genealogía
+description = Tema por alotropico.com
+screenshot = screenshot.png
+engine = phptemplate
+core = 7.x
+php = 5.2
+
+blacklist[stylesheets][] = "*/system.base.css"
+blacklist[stylesheets][] = "*/system.menus.css"
+blacklist[stylesheets][] = "*/field.css"
+
+;-------------- R E G I O N S -------------
+
+;regions_hidden[] = Oculta
+
+;-- Required Regions
+;regions[page_top] = Top
+;regions[content] = Content
+;regions[page_bottom] = Bottom top
+
+regions[header_first] = Header first
+regions[header_second] = Header second
+regions[header_third] = Header third
+
+regions[highlighted] = Highlighted
+
+regions[content] = Content
+
+regions[bottom] = Bottom
+
+regions[footer_first] = Footer top
+regions[footer_second] = Footer left
+regions[footer_third] = Footer right
+
+regions[placeholder] = Placeholder

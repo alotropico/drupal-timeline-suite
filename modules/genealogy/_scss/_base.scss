@@ -1,0 +1,197 @@
+@import 'compass';
+
+$m: 1em;
+
+// COMPASS
+
+$experimental-support-for-svg: true;
+
+$color: #93b66a;
+$link: #1f6aaa;
+$lighter: #f9f9f9;
+$light: #efefef;
+$grey: #d9d9d9;
+$shade: #999;
+$dark: #666;
+$darker: #222;
+$darkish: #a9a9a9;
+
+$tlColor: #fff;
+
+$magna: "only screen and (min-width : 1800px)";
+$mega: "only screen and (min-width : 1500px)";
+$huge: "only screen and (min-width : 1200px)";
+$desktop: "only screen and (min-width : 992px)";
+$tablet: "only screen and (min-width : 680px)";
+$smart: "only screen and (min-width : 480px)";
+
+$mini: "only screen and (max-width : 300px)";
+
+@media #{$desktop} { }
+
+//$colorsL: ($color, #d9b27d, #8ca6ed, #9bd08f, #c7d676, #e09281, #9bd08f, #cd83db, #71cea2, #998cdd, #91a7c6, #c39aab, #c7cc87, #ddab8c, #8ac38a, #a28dbe, #91c3c1, #938678, #af8fa0, #cdd0be);
+
+// $colors: (#d4cea1, #b5d4bd, #a8ccc7, #b3bcdd, #bf9ed3, #e099b7, #e2bf9d, #7492e5, #da75de, #ef9e71, #dddd60, #89dfe3);
+
+$colors: (
+    /*(0, #d4cea1),
+    (1, #b5d4bd),
+    (2, #a8ccc7),
+    (3, #b3bcdd),
+    (4, #d0bddb),
+    (5, #e099b7),
+    (6, #e2bf9d),
+    (7, #7492e5),
+    (8, #dfc2e0),
+    (9, #ef9e71),
+    (10, #e0e0a0),
+    (11, #b6dcde),
+    (12, #d4cea1),
+    (13, #b5d4bd),
+    (14, #a8ccc7),
+    (15, #b3bcdd),
+    (16, #d0bddb),
+    (17, #e099b7),
+    (18, #e2bf9d),
+    (19, #b2bddd),
+    (20, #d9a5db),
+    (21, #edc0a8),
+    (22, #dedec2),
+    (23, #bfdbdd),*/
+    (0, #58a4da),
+    (1, #e9b158),
+    (2, #f88a9f),
+    (3, #82d89a),
+    (4, #968ec9),
+    (5, #dab09f),
+    (6, #f4a87a),
+    (7, #7bb6c9),
+    (8, #c7d9e6),
+    (9, #edddc3),
+
+    (10, #a5caf1),
+    (11, #69b7c5),
+    (12, #9be2d3),
+    (13, #ebd1a5),
+    (14, #dd9ca6),
+    (15, #b8b8e9),
+    (16, #d4d8a5),
+    (17, #75b3d8),
+    (18, #b1ad7a),
+    (19, #9bcea6),
+    (20, #deadd7),
+    (21, #e1ae8b),
+    (22, #7db089),
+    (23, #8eb4e8),
+    (24, #7aa0d3),
+    (25, #b0ebbd),
+    (26, #38b4be),
+    (27, #62d7e1),
+    (28, #d79177),
+    (29, #c3a2e2),
+    (30, #4cc2b1),
+    (31, #44c4ec),
+    (32, #81a3e7),
+    (33, #45adec),
+    (34, #53eeee),
+    (35, #f29180),
+    (36, #93b66a),
+    (37, #ef87ab),
+    (38, #bbe292),
+    (39, #ebdf88),
+    (40, #c8a155),
+    (41, #df97dc),
+    (42, #e8c172),
+    (43, #4cc9a1),
+    (44, #63eece),
+    (45, #bbb55d),
+    (46, #75cb89),
+    (47, #e99863),
+    (48, #ab98ed),
+    (49, #5ca0f7),
+    
+    (50, #58a4da),
+    (51, #e9b158),
+    (52, #f88a9f),
+    (53, #82d89a),
+    (54, #968ec9),
+    (55, #dab09f),
+    (56, #f4a87a),
+    (57, #7bb6c9),
+    (58, #c7d9e6),
+    (59, #edddc3),
+    
+    (60, #a5caf1),
+    (61, #69b7c5),
+    (62, #9be2d3),
+    (63, #ebd1a5),
+    (64, #dd9ca6),
+    (65, #b8b8e9),
+    (66, #d4d8a5),
+    (67, #75b3d8),
+    (68, #b1ad7a),
+    (69, #9bcea6),
+    
+    (80, #58a4da),
+    (81, #e9b158),
+    (82, #f88a9f),
+    (83, #82d89a),
+    (84, #968ec9),
+    (85, #dab09f),
+    (86, #f4a87a),
+    (87, #7bb6c9),
+    (88, #c7d9e6),
+    (89, #edddc3),
+    
+    ('tao', $color),
+    ('child', #d9d9d9)
+);
+
+$new-list: prepend($colors, a);
+
+// FONTS
+
+$font-size:     14px;
+$font-min:      11px;
+$font-micro:    9px;
+$font-small:    80%;
+$font-medium:   85%;
+$font-high:     130%;
+$font-big:      150%;
+$font-huge:     500%;
+
+//@include font-face('Icons', font-files("icons/ceronocero.eot", "icons/ceronocero.woff", "icons/ceronocero.ttf", "icons/ceronocero.svg"));
+//@include font-face('IconsTL', font-files("icons/timeline.eot", "icons/timeline.woff", "icons/timeline.ttf", "icons/timeline.svg"));
+
+$font: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+$font2: Georgia, "Times New Roman", Times, serif;
+$font3: "Monotype Corsiva", "Bradley Hand ITC", "Tempus Sans", "French Script MT", "Comic Sans MS", cursive;
+$font4: "Impact", "Verdana", sans-serif;
+$font5: 'Comic Sans MS', cursive;
+$font6: "Verdana", "Arial", sans-serif;
+
+//
+
+%clear{
+    clear: both;
+    &:after, &:before{
+        content: '';
+        display: block;
+        clear: both;
+    }
+}
+
+%cover{
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+%unselectable{
+    user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -o-user-select: none;
+}

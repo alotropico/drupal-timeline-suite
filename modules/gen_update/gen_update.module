@@ -1,0 +1,45 @@
+<?php
+/**
+ * @file
+ * Main file of the gen_update module.
+ *
+ * This module will give you an easy UI to delete nodes by type. Use with care!
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function gen_update_menu() {
+  $items = array();
+
+  $items['admin/content/gen_update'] = array(
+    'title'            => 'Bulk update nodes',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('gen_update_form'),
+    'access arguments' => array('administer nodes'),
+    'type'             => MENU_LOCAL_TASK,
+    'weight'           => 11,
+    'file'             => 'gen_update.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * The cache must not be cleared as the last batch operation,
+ * but after the batch is finished.
+ * This function is called by the batch 'finished' parameter.
+ * @param $success
+ * @param $results
+ * @param $operations
+ */
+function _gen_update_batch_finished($success, $results, $operations) {
+  cache_clear_all();
+  $message = $success ? t('gen_update performed successfully.') : t('gen_update has not been finished successfully.');
+  watchdog('gen_update', $message);
+  drupal_set_message($message);
+}
+
+function gen_watchdoguear($par){
+  watchdog('gen_update', implode("|",$par));
+}

@@ -1,0 +1,249 @@
+.console{
+    //display: none;
+//    left: 0%;
+//    right: 0%;
+//    top: 0%;
+//    bottom: 0%;
+    //z-index: 1001;
+    //position: fixed;
+    
+    &.open{
+        display: block;
+    }
+    
+    .console_content{
+        position: absolute;
+        left: 10%;
+        right: 10%;
+        top: 10%;
+        bottom: 10%;
+        z-index: 1003;
+        background: white;
+        color: black;
+        border: 1px solid black;
+        @include box-shadow(0 4px 15px rgba(0,0,0,.6));
+        font-size: 12px;
+    }
+    .console_veil{
+        position: absolute;
+        left: 0%;
+        right: 0%;
+        top: 0%;
+        bottom: 0%;
+        background: rgba(0,0,0,.8);
+        z-index: 1002;
+    }
+    
+    //
+    
+    .console_input{
+        border-top: 1px solid black;
+        position: absolute;
+        left: 0;
+        right: 400px;
+        bottom: 0;
+        height: 100px;
+        padding: $m;
+        textarea{
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 62%;
+            max-width: 80%;
+            max-height: 100%;
+            overflow: hidden;
+            overflow-y: auto;
+            padding: $m;
+        }
+            
+        .console_options{
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 38%;
+            background: gray;
+            padding: $m/2;
+            
+            li{
+                padding: $m/2 $m;
+                padding-left: $m*2;
+            }
+            
+            a{
+                color: white;
+                text-decoration: underline;
+                position: relative;
+                &:hover{
+                    text-decoration: none;
+                }
+                
+                &:after{
+                    content: '';
+                    position: absolute;
+                    right: 100%;
+                    margin-right: $m/2;
+                    top: 50%;
+                    height: $m/2;
+                    width: $m/2;
+                    margin-top: -$m/4;
+                    background: lighten(gray, 10);
+                    @include border-radius(50%);
+                }
+                
+                &.active{
+                    color: green;
+                    
+                    &:after{
+                        background: green;
+                    }
+                }
+            }
+        }
+        
+        
+    }
+    
+    //
+    
+    .console_outputs{
+        a{
+            text-decoration: underline;
+            &:hover{
+                text-decoration: none;
+            }
+        }
+        
+        .key{
+            display: inline-block;
+            margin-right: $m;
+            text-transform: capitalize;
+        }
+        .val{
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: top;
+            max-width: 80%;
+        }
+
+        .it_h2{
+            //color: #e83f7c;
+            margin: $m*2 0;
+            
+            .key{
+                font-weight: bold;
+            }
+        }
+        .it_h2_small, .it_h2_error, .it_h2_warning{
+            color: #48a81e;
+            margin: $m/2 0;
+        }
+        .it_h2_error{
+            color: #e81818;
+            margin-bottom: $m/2;
+        }
+        .it_h2_warning{
+            color: #db8d11;
+            margin-bottom: $m/2;
+        }
+        
+        .it_p{
+            margin-bottom: $m/3;
+            .key{
+                width: 100px;
+            }
+        }
+        
+        .it_empty{
+            margin-bottom: $m/2;
+        }
+    }
+    
+    .console_output{
+        position: absolute;
+        left: 0;
+        right: 400px;
+        top: 0;
+        bottom: 100px;
+        padding: $m;
+        overflow: hidden;
+        overflow-y: scroll;
+        
+        .it_h2{
+            margin-left: $m;
+        }
+        .it_h2_small, .it_h2_error, .it_h2_warning{
+            margin-left: $m*2;
+        }
+        .it_h2_error{
+        }
+        .it_h2_warning{
+        }
+        
+        .it_p{
+            margin-left: $m*3;
+            .key{
+                width: 120px;
+                text-align: right;
+            }
+        }
+        
+        .it_empty{
+        }
+        
+    }
+    
+    .console_status{
+        border-left: 1px solid black;
+        position: absolute;
+        right: 0;
+        width: 400px;
+        top: 0;
+        bottom: 0;
+        background: grey;
+        padding: $m $m $m/2;
+        
+        .console_tools{
+            height: 38%;
+            padding: 0 0 $m/2;
+            position: relative;
+            
+            .wrap{
+                border: 1px solid grey;
+                overflow: hidden;
+                overflow-y: auto;
+                height: 100%;
+                padding: $m;
+                background: white;
+            }
+        }
+        
+        .console_history, .console_errors{
+            
+            height: 31%;
+            padding: $m/2 0;
+            
+            .wrap{
+                border: 1px solid grey;
+                overflow: hidden;
+                overflow-y: auto;
+                height: 100%;
+                padding: $m;
+                background: white;
+            }
+        }
+        
+        .console_history{
+            border-bottom: none;
+        }
+        
+        iframe{
+            position:absolute;
+            left:0;
+            top:0;
+            height:100%;
+            width:100%;
+        }
+    }
+}

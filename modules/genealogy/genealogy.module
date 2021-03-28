@@ -1,0 +1,188 @@
+<?php
+
+include_once 'genealogy.inc';
+include_once 'genealogy_quickedit.inc';
+include_once 'genealogy_properties.inc';
+include_once 'genealogy_relations.inc';
+
+function genealogy_Menu() {
+
+  $items = array();
+
+  $items['ajax/get_nodes'] = array(
+    'title' => 'Get nodes',
+    'description' => '',
+    'page callback' => 'ajax_genealogy',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  $items['ajax/node_queue'] = array(
+    'title' => 'Node queue for edit',
+    'description' => '',
+    'page callback' => 'ajax_node_queue',
+    'access callback' => TRUE,
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+    
+  return $items;
+}
+
+function ajax_genealogy() {
+
+  $ret = '';
+
+  if(isset($_GET['id']))
+    $id = $_GET['id'];
+
+  if(isset($id))
+    $ret = genealogyGet($id, array());
+
+  echo $ret;
+
+  //echo genealogyGet($_GET['id']);
+}
+
+//
+
+function genealogy_assets(){
+
+  $module_path = drupal_get_path('module', 'genealogy');
+
+  drupal_add_css($module_path . '/css/timeline_cloud.css');
+  
+  //drupal_add_js($module_path . '/js/alo_drag_and_drop.js');
+
+  drupal_add_js($module_path . '/js/timeline_cloud_mindmap.js');
+  drupal_add_js($module_path . '/js/timeline_cloud_window.js');
+  drupal_add_js($module_path . '/js/timeline_cloud_interpreter.js');
+  drupal_add_js($module_path . '/js/timeline_cloud_groups.js');
+  drupal_add_js($module_path . '/js/timeline_cloud_categories.js');
+  drupal_add_js($module_path . '/js/timeline_cloud_render.js');
+  drupal_add_js($module_path . '/js/timeline_periods.js');
+  drupal_add_js($module_path . '/js/timeline_cloud_brain.js');
+  drupal_add_js($module_path . '/js/timeline_cloud.js');
+  
+  // drupal_add_js($module_path . '/js/3dparty/jquery.mousewheel.min.js');
+  // drupal_add_js($module_path . '/js/3dparty/draggabilly.pkgd.min.js');
+
+  // drupal_add_js($module_path . '/js/datamap/d3.min.js');
+  // drupal_add_js($module_path . '/js/datamap/topojson.min.js');
+  // drupal_add_js($module_path . '/js/datamap/datamaps.world.min.js');
+
+  // drupal_add_js($module_path . '/js/genealogy.js');
+}
+
+function genealogy_node_view($node, $view_mode, $langcode) {
+  
+  if ($view_mode == 'full' && isset($node->type)) {
+
+    if($node->type == 'monad'){
+
+      genealogy_assets();
+
+      $node->content['#attached']['js'][] = array(
+        'data' => array(
+          'genealogy' => array(
+            'nid' => $node->nid,
+            'feed' => genealogyGet($node->nid, array())
+          )
+        ),
+        'type' => 'setting',
+      );
+
+    } else if($node->type == 'collection') {
+
+      genealogy_assets();
+
+      $node->content['#attached']['js'][] = array(
+        'data' => array(
+          'genealogy' => array(
+            'nid' => $node->nid,
+            'feed' => genealogyGet($node->nid, array())
+          )
+        ),
+        'type' => 'setting',
+      );
+
+      /*$node->content['#attached']['js'][] = array(
+        'data' => array(
+          'genealogy' => array(
+            //'nid' => '608174',
+            'feed' => genealogyGet(FALSE, array(
+                'filters' => array(559460),
+                'start' => '-9000000000000',
+                'end' => '3018'
+                // 'start' => '1970',
+                // 'end' => '2000'
+              ))
+          )
+        ),
+        'type' => 'setting',
+      );*/
+
+    }
+  }
+}
+function genealogy_preprocess_node(&$vars) {
+
+    if(isset($vars['type']) && isset($vars['view_mode']) && $vars['view_mode'] == 'full' && ($vars['type'] == 'collection' || $vars['type'] == 'monad')){
+
+      $vars['theme_hook_suggestions'][] = 'gen_tpl';
+
+      if(isset($vars["field_name"]['0']['value']) && $vars["field_name"]['0']['value'])
+        $rawTitle = $vars['field_name']['0']['value'];
+      else
+        $rawTitle = $vars['title'];
+
+      $vars['title'] = $rawTitle;
+    }
+}
+
+function genealogy_theme() {
+  return array(
+    'gen_tpl' => array(
+      'template' => 'gen',
+      'variables' => array(),
+    ),
+  );
+}
+
+/* BLOCK */
+
+function genealogy_block_info() {
+  $blocks['overfly'] = array(
+    'info' => t('Overfly timeline'),
+    'status' => TRUE,
+    'cache' => DRUPAL_CACHE_PER_ROLE,
+  );
+  return $blocks;
+}
+
+function genealogy_block_view($delta = '') {
+
+  $items = array();
+
+  genealogy_assets();
+
+  $block['content'] = theme('gen_tpl', array());
+
+  /*$node->content['#attached']['js'][] = array(
+        'data' => array(
+          'genealogy' => array(
+            //'nid' => '608174',
+            'feed' => genealogyGet(FALSE, array(
+                'filters' => array(559460),
+                'start' => '-9000000000000',
+                'end' => '3018'
+                // 'start' => '1970',
+                // 'end' => '2000'
+              ))
+          )
+        ),
+        'type' => 'setting',
+      );*/
+
+  return $block;
+  
+}

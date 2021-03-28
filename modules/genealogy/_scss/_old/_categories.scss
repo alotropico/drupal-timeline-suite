@@ -1,0 +1,116 @@
+%nested-item{
+    display: inline-block;
+    padding: $m/4 $m/4;
+    line-height: 1.1;
+    margin-right: $m/8;
+    margin-bottom: $m/8;
+    border: 1px solid rgba($light, 0);
+    cursor: pointer;
+    position: relative;
+    //@include border-radius(5px);
+    @include transition(all .2s);
+}
+
+.gen-categories{
+    z-index: 2;
+    position: relative;
+}
+
+.gen-categories.gen-categories{
+    margin: 0 0 0;
+    padding: $m/2 33px;
+}
+
+.gen-category-snack {
+    display: block;
+    margin-right: $m;
+    margin-top: $m/2;
+    position: relative;
+    
+    &:empty {
+        display: none;
+    }
+
+    &:after{
+        @extend %nested-item;
+        font-size: $font-min;
+        
+        content: '';
+        width: 30px;
+        height: 20px;
+        vertical-align: middle;
+        position: absolute;
+        right: 100%;
+        top: .25em;
+    }
+    
+    .c-item{
+        @extend %unselectable;
+        @extend %nested-item;
+        font-size: $font-min;
+        
+        border: 1px solid $light;
+    
+        span{
+            
+        }
+
+        &:before{
+            content: '';
+            display: inline-block;
+            vertical-align: middle;
+            width: $m*0.9;
+            height: $m*0.9;
+            margin-right: $m/2;
+            @include border-radius(50%);
+            @include transition(all .2s);
+        }
+    }
+    
+    &.gen-categories-0{
+        position: absolute;
+        
+        &:after{
+            display: none;
+        }
+
+        .c-item{
+            color: #d41010;
+            display: none;
+            background: white;
+            border: 1px solid #d9d9d9;
+            
+            &:before{
+                display: none;
+            }
+            
+            &.unactive{
+                display: inline-block;
+            }
+        }
+    }
+    &.gen-categories-1{
+        
+        &:after{
+            @include gen-sprite('relTo');
+        }
+    }
+    &.gen-categories-2{
+//        float: left;
+//        clear: left;
+        
+        &:before{
+            content: '';
+            display: block;
+            clear: both;
+        }
+        
+        &:after{
+            @include gen-sprite('relFrom');
+        }
+    }
+}
+
+.c-item{
+    
+}

@@ -1,0 +1,1159 @@
+<?php
+
+$GLOBALS['lang'] = 'en';
+
+function wikidata_importer_Menu() {
+
+  $items['ajax/importnewnode'] = array(
+    'type' => MENU_CALLBACK,
+    'title' => 'Save as node',
+    'description' => '',
+    'page callback' => 'ajax_wikidata_importer_savenode',
+    'access callback' => 'user_is_logged_in',
+    'access arguments' => array('access content'),
+  );
+
+  $items['ajax/includeincollection'] = array(
+    'type' => MENU_CALLBACK,
+    'title' => 'Include items in collection',
+    'description' => '',
+    'page callback' => 'ajax_wikidata_collection',
+    'access callback' => 'user_is_logged_in',
+    'access arguments' => array('access content'),
+  );
+
+  $items['advanced/import'] = array(
+    'type' => MENU_NORMAL_ITEM,
+    'title' => t('Import from Wikidata or Wikipedia'),
+    'description' => 'Get content from Wikidata and save it with entities and relations.',
+    'page callback' => 'wikidata_import',
+    'access callback' => 'user_is_logged_in',
+    'access arguments' => array('access content'),
+  );
+
+  $items['advanced/collection'] = array(
+    'type' => MENU_NORMAL_ITEM,
+    'title' => t('Include items in a collection by Wikidata id'),
+    'description' => '',
+    'page callback' => 'wikidata_collection',
+    'access callback' => 'user_is_logged_in',
+    'access arguments' => array('access content'),
+  );
+    
+  return $items;
+}
+
+// CREATE AND SAVE NODE
+// creates placeholders for unexisting related items
+// creates relations dependant of the node
+function ajax_wikidata_importer_savenode($content = FALSE) {
+
+  global $user;
+  global $language;
+
+  $saveRelations = TRUE;
+  $savePicture = TRUE;
+  $forceSave = FALSE;
+  $override = FALSE;
+
+  if(!$content){
+
+    if(isset($_POST['postData']))
+      $content = json_decode(urldecode(rawurldecode($_POST['postData'])));
+
+    elseif(isset($_GET['postData']))
+      $content = json_decode(rawurldecode($_GET['postData']));
+
+    if(isset($_POST['override']))
+      $override = $_POST['override'];
+  }
+
+  // print_r('<pre>');
+  // print_r($content);
+  // print_r('</pre>');
+
+  if(isset($content->wikidata_id) && is_string($content->wikidata_id))
+    $title = $content->wikidata_id;
+  elseif(isset($content->name) && is_string($content->name))
+    $title = urldecode($content->name);
+
+  if(isset($title)){
+
+    $entities = getNode($title);
+
+    if(!empty($entities['node'])){
+
+      // get existing entity
+
+      $fields = field_info_instances('node', 'monad');
+
+      $field_id = $fields['field_status']['field_id'];
+
+      field_attach_load('node', $entities['node'], FIELD_LOAD_CURRENT, array('field_id' => $field_id));
+
+      $status = field_get_items('node', reset($entities['node']), 'field_status')['0']['value'];
+
+      $nid = reset($entities['node'])->nid;
+
+    } else {
+
+      $nid = getNidFromTitle($title);
+
+    }
+
+    if(isset($content->body) && stripos($content->body, 'wiki') !== false && stripos($content->body, 'disambiguation') !== false){
+
+      echo '{warning}' . t('the system does not save disambiguation pages. ' . $title);
+
+    }elseif($override || $forceSave || empty($entities['node']) || (isset($status) && ($status == 'empty' || $status == 'queued') )) {
+
+      // load entity
+
+      $newNode = (object) NULL;
+      $newNode = node_load($nid, NULL, TRUE);
+
+      setCommonVariables($newNode, $content);
+
+      $name = $newNode->field_name[LANGUAGE_NONE][0]['value'];
+
+      if($savePicture && isset($content->image) && !isset($newNode->field_picture[LANGUAGE_NONE][0])){
+
+        $image_url = urldecode($content->image);
+
+        preg_match_all('/[A-Z0-9]/', strtoupper(lastFromUrl($image_url)), $matches);
+
+        if($matches[0][0])
+          $firstLetter = $matches[0][0];
+        else
+          $firstLetter = '0';
+
+        $ext = pathinfo($image_url, PATHINFO_EXTENSION);
+
+        if(!$ext)
+          $ext = $image_url;
+
+        $ext = strtolower($ext);
+
+        if(strpos($image_url, 'wikimedia.org') !== false)
+          $image_basename = basename($image_url);
+        else
+          $image_basename = clean($name) . '.' . $ext;
+
+        $hash = md5( $image_basename );
+
+        $dir = file_default_scheme().'://monads/' . substr($hash, 0, 1) . '/' . substr($hash, 1, 2) . '/' . $ext . '/';
+
+         if(!is_dir($dir)){
+          mkdir($dir, 0777, true);
+        }
+
+        $file = file_save_data(file_get_contents($image_url), $dir . $image_basename, FILE_EXISTS_REPLACE);
+
+        if(isset($file) && $file){
+
+          $file->status = 1;
+          $file->display = 1;
+
+          if(strpos($image_url, 'wikimedia.org') !== false)
+            $file->description = $image_url;
+          else
+            $file->description = $name;
+
+          $file->title = $image_url;
+          $file->alt = $image_url;
+          $file->uid = $user->uid;
+          $file->comment = 0;
+          $newNode->field_picture[LANGUAGE_NONE][0] = (array)$file;
+
+          if(strpos($image_url, 'wikimedia.org') !== false)
+            $newNode->field_picture[LANGUAGE_NONE][0]['description'] = $image_url;
+          else
+            $newNode->field_picture[LANGUAGE_NONE][0]['description'] = $name;
+
+          // $newNode->field_picture[LANGUAGE_NONE][0]['description'] = preg_replace('/\\.[^.\\s]{3,4}$/', '', $image_url);
+        }
+
+      }
+
+      // IDENTIFIERS
+
+      //
+
+      // dpm($content->identifiers);
+      // dpm($content);
+
+      if(isset($content->identifiers)){
+
+        $newNode->field_identifiers[LANGUAGE_NONE] = array();
+        //$newNode->field_instance_of[LANGUAGE_NONE] = array();
+
+        foreach ($content->identifiers as $key => $val) {
+
+          $mvalue = (isset($val->raw) ? $val->raw : $val->id);
+
+          //dpm($val->property);
+
+          //if($val->property != 'P31'){
+
+          $newNode->field_identifiers[LANGUAGE_NONE][] = array(
+            'first' => $val->property,
+            'second' => $mvalue
+          );
+        }
+      }
+
+      // RELATIONS
+
+      if($saveRelations && isset($content->items)){
+
+        // Load old relations
+
+        $relationsRaw = importerGetRelations($nid);
+
+        $rids = array();
+        foreach ($relationsRaw as $rid => $val) {
+          $rids[] = $val->rid;
+        }
+
+        $relations = relation_load_multiple($rids);
+
+        // Save relations
+
+        $relationTypes = array();
+
+        $propertiesToSave = array(
+
+          /* POR CLASE Y TIPO */
+          'P31' => 'instance of',
+          'P361' => 'part of',
+          'P279' => 'subclass of',
+          'P2445' => 'metasubclass of',
+          'P171' => 'parent taxon',
+          'P105' => 'taxon rank',
+          'P179' => 'series',
+          'P1582' => 'natural product of taxon',
+          'P2548' => 'strand orientation',
+
+          'P1716' => 'brand',
+          'P176' => 'manufacturer',
+
+          'P2094' => 'competition class',
+
+          /* SEXUALLITY AND SUCH*/
+          'P21' => 'sex or gender',
+          'P91' => 'sexual orientation',
+
+          /* POR LUGAR */
+          'P30' => 'continent',
+          'P17' => 'country',
+          'P27' => 'country of citizenship',
+          'P495' => 'country of origin',
+          'P1376' => 'capital of',
+          'P1001' => 'applies to jurisdiction',
+          'P1080' => 'from fictional universe',
+          'P1434' => 'takes place in fictional universe',
+          'P1165' => 'home world',
+          'P1408' => 'licensed to broadcast to',
+          'P2541' => 'operating area',
+          'P183' => 'endemic to',
+          'P2341' => 'indigenous to',
+
+          /* POR IDIOMA */
+          'P2439' => 'language',
+          'P407' => 'language of work or name',
+          'P37' => 'official language',
+          'P103' => 'native language',
+          'P364' => 'original language of work',
+
+          /* POR CULTURA Y ETNICIDAD */
+          'P2596' => 'culture',
+          'P172' => 'ethnic group',
+
+          /* POR IDEOLOGIA */
+          'P102' => 'member of political party',
+          'P1142' => 'political ideology',
+          'P1387' => 'political alignment',
+          'P135' => 'movement',
+          'P122' => 'basic form of government',
+          'P140' => 'religion',
+          'P1049' => 'worshipped by',
+          'P1576' => 'lifestyle',
+
+          /* POR TIPO */
+          'P522' => 'type of orbit',
+          'P186' => 'material used',
+          'P1056' => 'product or material produced',
+          'P1002' => 'engine configuration',
+          'P1956' => 'takeoff and landing capability',
+          'P1201' => 'space tug',
+          'P1210' => 'supercharger',
+          'P1211' => 'fuel system',
+          'P1221' => 'compressor type',
+          'P1654' => 'wing configuration',
+          'P141' => 'IUCN conservation status',
+          'P2371' => 'FAO risk status',
+          'P1604' => 'biosafety level',
+          'P2127' => 'International Nuclear Event Scale',
+          'P1435' => 'heritage designation',
+          'P1454' => 'legal form',
+          'P1558' => 'tempo marking',
+          'P1568' => 'domain',
+          'P1571' => 'codomain',
+          'P1878' => 'Vox-ATypI classification',
+          'P2551' => 'used metre',
+
+          'P275' => 'license',
+          'P277' => 'programming language',
+          'P282' => 'writing system',
+          'P2827' => 'flower color',
+          'P289' => 'vessel class',
+          'P291' => 'place of publication',
+          'P2962' => 'title of chess player',
+          'P2989' => 'has grammatical case',
+          'P3075' => 'official religion',
+          'P3259' => 'intangible cultural heritage status',
+          'P3716' => 'social classification',
+          'P39' => 'position held',
+          'P400' => 'platform IN videogames',
+          'P404' => 'game mode',
+          'P410' => 'military rank',
+          'P413' => 'position played on team / speciality',
+          'P449' => 'original network',
+          'P54' => 'member of sports team',
+          'P59' => 'constellation',
+          'P641' => 'sport',
+          'P789' => 'edibility',
+          'P921' => 'main subject',
+          'P97' => 'noble title',
+
+          'P1269' => 'facet of',
+
+          'P1303' => 'instrument',
+          'P412' => 'voice type',
+          'P1731' => 'Fach',
+
+          /* FIELD */
+          'P106' => 'occupation',
+          'P101' => 'field of work',
+          'P2563' => 'superhuman feature or ability',
+
+          'libro, proyecto, disco' => '/* POR OBJETO PADRE',
+          'P4510' => 'describes a project that uses',
+          'P1433' => 'published in',
+          'P1445' => 'fictional universe described in',
+          'P1574' => 'exemplar of',
+          'P196' => 'minor planet group',
+
+          /* GENRE */
+          'P136' => 'genre',
+          'P149' => 'architectural style',
+          'P452' => 'industry',
+
+          /* PARENT ORGANIZATION */
+          'P749' => 'parent organization',
+          'P1027' => 'conferred by',
+          'P1079' => 'launch contractor',
+          'P1268' => 'represents',
+          'P195' => 'collection',
+
+          /* POR ACCIONES */
+          'P1046' => 'discovery method',
+
+          'P2360' => 'intended public'
+
+          //affiliation (P1416)
+          //has quality (P1552)
+
+          //'P1532' => 'country for sport'
+          //main subject (P921)
+          //owned by (P127)
+          // member of sports team (P54)
+
+
+          //"parent astronomical body" "397",
+        );
+
+        $newNode->field_sets[LANGUAGE_NONE] = array();
+
+        foreach ($content->items as $key => $val) {
+
+          if(isset($val->property)){
+
+            if(!isset($relationTypes[$val->property]))
+              $relationTypes[$val->property] = 1;
+            else if($relationTypes[$val->property] > 0.1)
+              $relationTypes[$val->property] -= 0.02;
+
+            if($relationTypes[$val->property] < 0.1)
+              $relationTypes[$val->property] = 0.1;
+
+            $nodeHierarchy = round($newNode->field_hierarchy[LANGUAGE_NONE]['0']['value'] * $relationTypes[$val->property]);
+
+            makeAndGetRelation($nid, $val, $relations, 'node', $nodeHierarchy);
+
+            // sets
+            // (a special kind of relation, to be saved locally on the item)
+
+            if(isset($propertiesToSave[$val->property])){
+
+              $first = getNidFromTitle($val->property);
+              $second = getNidFromTitle($val->id);
+
+              if($first && $second){
+
+                $newNode->field_sets[LANGUAGE_NONE][] = array(
+                  'first' => getNidFromTitle($val->property),
+                  'second' => getNidFromTitle($val->id),
+                );
+              }
+            }
+          }
+        }
+      }
+
+      $type = substr($content->wikidata_id, 0, 1);
+
+      // SET TYPE
+      if ($type == 'Q')
+        $newNode->field_type[LANGUAGE_NONE]['0']['value'] = 0;
+      elseif ($type == 'P')
+        $newNode->field_type[LANGUAGE_NONE]['0']['value'] = 1;
+      else
+        $newNode->field_type[LANGUAGE_NONE]['0']['value'] = 2;
+
+      // SET STATUS
+      $newNode->field_status[LANGUAGE_NONE]['0']['value'] = 'imported';
+
+      // SAVE NODE
+      node_object_prepare($newNode);
+
+      node_save($newNode);
+
+      if(isset($content->name))
+        $returnTitle = $content->name;
+      else
+        $returnTitle = $newNode->nid;
+
+      $path = drupal_get_path_alias('node/' . $newNode->nid);
+
+      //echo '{saved}' . '/' . $path . '/?name=' . $returnTitle;
+
+      echo  '{saved}' . '<a href="/' . $path . '" target="_blank">' . $returnTitle . '</a>' .
+            ', <a href="/node/' . $newNode->nid . '/edit" target="_blank">Edit</a>' .
+            ', <a href="/advanced/relations?endpoints_entity_id=' . $newNode->nid . '" target="_blank">Relations</a>' .
+            ', Hierarchy: ' . $newNode->field_hierarchy[LANGUAGE_NONE]['0']['value'];
+
+    } else {
+
+      $mnid = 0;
+      foreach ($entities['node'] as $key => $value) {
+        $mnid = $key;
+      }
+
+      $path = drupal_get_path_alias('node/' . $mnid);
+
+      echo  '{warning}' . 'that thing already exists: ' . '<a href="/' . $path . '" target="_blank">' . $path . '</a>' .
+            ', <a href="/node/' . $mnid . '/edit" target="_blank">Edit</a>' .
+            ', <a href="/advanced/relations?endpoints_entity_id=' . $mnid . '" target="_blank">Relations</a>';
+    }
+
+  } else
+    echo '{error}' . t('no title provided');
+}
+
+// Gets time and extra info
+// and returns data formatted as discrete_date field
+function extractTime($time, $precision = FALSE, $property = FALSE){
+
+  $ret = array();
+
+  preg_match("/(^.+?)\-.+$/is", $time, $match);
+
+  $year = $match[1];
+
+  if(intVal($year) < -5000){
+    $ret['year'] = $year;
+
+  } else {
+
+    $time = str_replace(":00Z", "", $time);
+
+    $date = new DateTime($time, new DateTimeZone('UTC'));
+
+    $ret['year'] = (int)$year;
+
+    if($precision >= 10){
+      $ret['month'] = (int)$date->format('n');
+
+      if($precision >= 11){
+        $ret['day'] = (int)$date->format('j');
+
+        if($precision >= 12){
+          $ret['hours'] = (int)$date->format('h');
+
+          if($precision >= 15){
+            $ret['minutes'] = (int)$date->format('i');
+
+            if($precision >= 16)
+              $ret['seconds'] = (int)$date->format('s');
+          }
+        }
+      }
+    }
+  }
+
+  if(!isset($ret['month']))
+    $ret['month'] = 0;
+
+  if(!isset($ret['day']))
+    $ret['day'] = 0;
+
+  if(!isset($ret['hours']))
+    $ret['hours'] = 0;
+
+  if(!isset($ret['minutes']))
+    $ret['minutes'] = 0;
+
+  if(!isset($ret['seconds']))
+    $ret['seconds'] = 0;
+
+  if($precision)
+    $ret['precision'] = $precision;
+
+  if($property)
+    $ret['timetype'] = $property;
+
+  return $ret;
+}
+
+function setCommonVariables(&$entity, $data){
+
+  // time
+
+  date_default_timezone_set('UTC');
+
+  $timeFields = array(
+    array('field_start', 'start_time', 'start_precision', 'start_property'),
+    array('field_end', 'end_time', 'end_precision', 'end_property'),
+  );
+
+  foreach ($timeFields as $tf) {
+    if(isset($data->{$tf[1]})){
+
+      $precision = (isset($data->{$tf[2]}) ? $data->{$tf[2]} : -1);
+
+      $property = (isset($data->{$tf[3]}) ? $data->{$tf[3]} : '');
+
+      $entity->{$tf[0]}[LANGUAGE_NONE][0] = extractTime($data->{$tf[1]}, $precision, $property);
+
+    } else {
+      $entity->{$tf[0]}[LANGUAGE_NONE][0] = '0';
+    }
+  }
+
+  // other fields
+
+  if(isset($data->wikidata_id))
+    $entity->field_wikidata_id[LANGUAGE_NONE][0]['value'] = $data->wikidata_id;
+
+  if(isset($data->wikipedia_id))
+    $entity->field_wikipedia_id[LANGUAGE_NONE][0]['value'] = filter_var($data->wikipedia_id, FILTER_SANITIZE_NUMBER_INT);
+
+  if(!isset($entity->field_name[LANGUAGE_NONE][0]['value']) || $entity->field_name[LANGUAGE_NONE][0]['value'] == ''){
+    if(isset($data->name))
+      $entity->field_name[LANGUAGE_NONE][0]['value'] = urldecode($data->name);
+    elseif(isset($data->value))
+      $entity->field_name[LANGUAGE_NONE][0]['value'] = urldecode($data->value);
+    else
+      $entity->field_name[LANGUAGE_NONE][0]['value'] = '';
+  }
+
+  if(isset($data->amount))
+    $entity->field_quantity[LANGUAGE_NONE][0]['value'] = urldecode($data->amount);
+
+  if(isset($data->body))
+    $entity->field_body[LANGUAGE_NONE][0]['value'] = urldecode($data->body);
+
+  if(isset($data->wikipedia_body))
+    $entity->field_wikipedia_brief[LANGUAGE_NONE][0]['value'] = urldecode($data->wikipedia_body);
+
+  if(isset($data->latitude))
+    $entity->field_geolocation[LANGUAGE_NONE][0]['lat'] = urldecode($data->latitude);
+
+  if(isset($data->longitude))
+    $entity->field_geolocation[LANGUAGE_NONE][0]['lng'] = urldecode($data->longitude);
+
+  //
+
+  if(isset($val->items))
+    $items = count($val->items);
+  else
+    $items = 0;
+
+  if(!isset($entity->field_hierarchy[LANGUAGE_NONE][0]['value']) || !$entity->field_hierarchy[LANGUAGE_NONE][0]['value']){
+
+    // if(isset($val->identifiers))
+    //   dpm($val->identifiers);
+
+    if(isset($data->rating))
+      $entity->field_hierarchy[LANGUAGE_NONE][0]['value'] = getHierarchyFromEntity($entity, $data->backlinks, $items, (float)$data->rating);
+    if(isset($data->backlinks))
+      $entity->field_hierarchy[LANGUAGE_NONE][0]['value'] = getHierarchyFromEntity($entity, $data->backlinks, $items);
+    else
+      $entity->field_hierarchy[LANGUAGE_NONE][0]['value'] = getHierarchyFromEntity($entity, 0, $items);
+  }
+
+}
+
+// RELATIONS FUNCTIONS
+
+function importerGetRelations($eid){
+
+  $query = new EntityFieldQuery();
+
+  $query->entityCondition('entity_type', 'relation');
+  $query->fieldCondition('endpoints', 'entity_id', $eid, '=', 0);
+  $query->fieldCondition('endpoints', 'r_index', '0', '=', 0);
+
+  $query->range(0, 5000)
+        ->addMetaData('account', user_load(1));
+    
+  $results = $query->execute();
+
+  if(isset($results['relation']))
+    return $results['relation'];
+  else
+    return array();
+}
+
+// Create relation and return
+// or return existing relation
+function makeAndGetRelation($eid, $val, $relations = FALSE, $entity_type = 'node', $forceHirerarchy = FALSE){
+
+  $property = getNidFromTitle($val->property);
+
+  $endpoints = array();
+
+  $endpoints[] = array('entity_type' => $entity_type, 'entity_id' => $eid);
+
+  $endpoints[] = array('entity_type' => 'node', 'entity_id' => $property);
+
+  if(isset($val->id)){
+
+    $id = getNidFromTitle($val->id);
+
+    $endpoints[] = array('entity_type' => 'node', 'entity_id' => $id);
+
+  }
+
+  if(isset($val->unit) && $val->unit){
+
+    $unit = getNidFromTitle($val->unit);
+
+    $endpoints[] = array('entity_type' => 'node', 'entity_id' => $unit);
+  }
+
+  $rid = createRelation($endpoints, $val, $relations, $forceHirerarchy);
+
+  // recurrence: second to n order relations
+
+  /*if(isset($val->items) && $val->items && !$relations){
+
+    // Load old relations for this relation
+
+    foreach ($val->items as $subitem) {
+
+      if(isset($subitem->property)){
+
+        makeAndGetRelation($rid, $subitem, FALSE, 'relation');
+
+      }
+    }
+  }*/
+
+  return $rid;
+}
+
+function createRelation($endpoints, $fields = FALSE, $oldRelations = FALSE, $forceHirerarchy = FALSE){
+
+  $relation = relation_create('property', $endpoints);
+
+  if($fields)
+    setCommonVariables($relation, $fields);
+
+  $skipRelation = FALSE;
+
+  // Check if the relation already exists
+
+  if($oldRelations)
+    $skipRelation = relationExists($relation, $oldRelations);
+
+  // print_r('<pre>');
+  // print_r($skipRelation);
+  // print_r('</pre>');
+
+  // Save new relation or return old one
+
+  if(!$skipRelation){
+
+    if($forceHirerarchy)
+      $relation->field_hierarchy[LANGUAGE_NONE][0]['value'] = $forceHirerarchy;
+
+    // print_r('<pre>');
+    // print_r($relation);
+    // print_r('</pre>');
+
+    relation_save($relation);
+    
+    return $relation->rid;
+
+  } else {
+
+    return $skipRelation;
+
+  }
+}
+
+function relationExists($candidate, $relationSnack){
+
+  // One of these fields must be unique for the relation to be consider new
+  $keysToCheck = array(
+      'endpoints' => 'entity_id',
+      'field_quantity' => 'value',
+      'field_name' => 'value',
+      'field_geolocation' => 'lat',
+      'field_geolocation' => 'lng',
+      'field_start' => 'year',
+      // 'field_start' => 'month',
+      // 'field_start' => 'day',
+      // 'field_start' => 'timetype',
+      'field_end' => 'year',
+      // 'field_end' => 'month',
+      // 'field_end' => 'day',
+      // 'field_end' => 'timetype',
+    );
+
+  foreach ($relationSnack as $oldRelation) {
+
+    $matches = TRUE;
+
+    foreach ($keysToCheck as $key => $dat) {
+
+      if(!isset($candidate->{$key}[LANGUAGE_NONE]) && !isset($oldRelation->{$key}[LANGUAGE_NONE])){
+
+        // Neither has this field, ignore
+
+      } else {
+
+        if(isset($candidate->{$key}[LANGUAGE_NONE]) && isset($oldRelation->{$key}[LANGUAGE_NONE]) && (count($candidate->{$key}[LANGUAGE_NONE]) != count($oldRelation->{$key}[LANGUAGE_NONE]))) {
+
+          // Different size fields, assume different relations
+
+          $matches = FALSE;
+          break;
+
+        } else {
+
+          if(isset($candidate->{$key}[LANGUAGE_NONE][0])){
+
+            foreach ($candidate->{$key}[LANGUAGE_NONE] as $count => $candItem) {
+
+              if(isset($candItem{$dat}) && isset($oldRelation->{$key}[LANGUAGE_NONE][$count]{$dat}) ) {
+
+                if($candItem{$dat} != $oldRelation->{$key}[LANGUAGE_NONE][$count]{$dat}){
+
+                  // One of the values different, different relations
+
+                  $matches = FALSE;
+                  break 2;
+
+                } else {
+
+                  //dpm($candItem);
+                  
+                }
+
+              } elseif( !isset($candItem{$dat}) && isset($oldRelation->{$key}[LANGUAGE_NONE][$count]{$dat}) && $oldRelation->{$key}[LANGUAGE_NONE][$count]{$dat}) {
+
+                // One of the values present, another is not, different relations
+
+                $matches = FALSE;
+                break 2;
+                
+              } elseif( !isset($oldRelation->{$key}[LANGUAGE_NONE][$count]{$dat}) && isset($candItem{$dat}) && $candItem{$dat}) {
+
+                // One of the values present, another is not, different relations
+                
+                $matches = FALSE;
+                break 2;
+
+              }
+            }
+
+          } else {
+
+            // Candidate has no value, different relations
+
+            $matches = FALSE;
+            break;
+
+          }
+        }
+      } 
+    }
+
+    // Some relation is identical to candidate
+
+    if($matches){
+      return $oldRelation->rid;
+    }
+
+  }
+
+  return FALSE;
+}
+
+// NODES SNIPPETS
+
+function getNidFromTitle($refTit){ // Returns nid of the node "title" or creates it
+
+  $newNodeRef = getNode($refTit);
+
+  if(empty($newNodeRef)){
+
+    // Create new node and return its id
+
+    $newNodeRef = (object) NULL;
+    $newNodeRef->title = $refTit;
+    $newNodeRef->type = 'monad';
+    $newNodeRef->uid = 0;
+    $newNodeRef->created = strtotime("now");
+    $newNodeRef->changed = strtotime("now");
+    $newNodeRef->status = 1;
+    $newNodeRef->comment = 2;
+    $newNodeRef->promote = 0;
+    $newNodeRef->moderate = 0;
+    $newNodeRef->sticky = 0;
+    $newNodeRef->language = LANGUAGE_NONE;
+
+    $newNodeRef->field_status[LANGUAGE_NONE]['0']['value'] = 'empty';
+
+    node_object_prepare($newNodeRef);
+    node_save($newNodeRef);
+
+    return $newNodeRef->nid;
+
+  } else {
+
+    $noderoot = array_values($newNodeRef);
+
+    if(isset($noderoot[0]) && isset(reset($noderoot[0])->nid))
+      $nid = reset($noderoot[0])->nid;
+    else {
+      $nid = false;
+    }
+
+    return $nid;
+
+  }
+}
+
+// HIERARCHY
+
+function getHierarchyFromEntity($entity, $childs, $props, $extra = 0){ // extra >0 <10
+
+  // HIERARCHY
+
+  /*$familyQuery = new EntityFieldQuery();
+
+  $childEntities = $familyQuery->entityCondition('entity_type', 'node')
+    ->propertyCondition('type', 'monad')
+    ->propertyCondition('status', 1)
+    ->fieldCondition('field_parents', 'target_id', $id)
+    ->range(0, 20000) // NO MORE THAN THIS QTY OF CHILDS WILL BE LOADED
+    ->execute();
+
+  if(isset($childEntities['node'])){
+    $childs = count(array_keys($childEntities['node']));
+  } else {
+    $childs = 0;
+  }*/
+
+  if(isset($entity->field_wikipedia_id[LANGUAGE_NONE][0]['value'])){
+
+      $wikiId = $entity->field_wikipedia_id[LANGUAGE_NONE][0]['value'];
+
+      $src = 'https://' . $GLOBALS['lang'] . '.wikipedia.org/w/api.php?format=json&action=query&prop=info&pageids=' . $wikiId;
+
+      $infoData = json_decode(getCurl($src), true);
+
+      if(isset($infoData['query']['pages'][$wikiId]['length']))
+        $article_length = $infoData['query']['pages'][$wikiId]['length'];
+      else
+        $article_length = 0;
+  } else {
+    $article_length = 0;
+  }
+
+  if(isset($entity->field_start[LANGUAGE_NONE][0]['year']))
+    $startyear = $entity->field_start[LANGUAGE_NONE][0]['year'];
+  else
+    $startyear = 0;
+
+  if(isset($entity->field_end[LANGUAGE_NONE][0]['year']))
+    $endyear = $entity->field_end[LANGUAGE_NONE][0]['year'];
+  else
+    $endyear = 0;
+
+  // print_r('<pre>');
+  // print_r($entity);
+  // print_r('<pre>');
+
+  return getHierarchy($startyear, $endyear, $childs, $article_length, $props, $extra);
+
+}
+
+function getHierarchy($startyear = 0, $endyear = 0, $childs = 0, $length = 0, $props = 0, $extra = 0){
+
+  // if($startyear != 0){
+  //   $age = strlen(abs(date("Y")+1-$startyear)) / 11;
+  // } else
+  //   $age = 0;
+
+  if($startyear != 0){
+    $age = abs(date("Y")+1-$startyear) / 10000;
+
+    if($age>1)
+      $age = 1;
+
+  }else
+    $age = 0;
+
+  // if($age < 1 && $age > 0)
+  //   $age = 1.5;
+
+  if($startyear != 0)
+    $ageRaw = abs(date("Y")+1-$startyear) / 13798000000;
+  else
+    $ageRaw = 0;
+
+  if($length > 500000)
+    $length = 1;
+  else
+    $length /= 500000;
+
+  if($childs)
+    $childs /= 20000;
+
+  if($props)
+    $props /= 400;
+
+  if($extra)
+    $extra = ($extra-5)/5;
+
+  $ret = round($age*500 + $ageRaw*3000 + $childs*100 + $length*50 + $props*50 + $extra*50) + 50;
+
+  return $ret;
+}
+
+// SNIPPETS
+
+function getCurl($src){ // Returns content of $src (external data)
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_URL, $src);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST,  2);
+  curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+  curl_setopt($ch, CURLOPT_HEADER, 0);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+  curl_setopt($ch,CURLOPT_TIMEOUT,10000);
+  $ret = curl_exec($ch);
+  curl_close($ch);
+  return $ret;
+}
+
+function getNode($title){ // Loads and returns node by title
+
+  $query = new EntityFieldQuery();
+
+  $entities = $query->entityCondition('entity_type', 'node')
+    ->propertyCondition('type', 'monad')
+    ->propertyCondition('title', $title)
+    ->propertyCondition('status', 1)
+    ->range(0,1)
+    ->execute();
+
+  return $entities;
+}
+
+function listToArray($array, $html = false, $level = 0) { // Converts string to array
+
+  // Did I do this?
+  $space = $html ? "&nbsp;" : " ";
+  $newline = $html ? "<br />" : "\n";
+  for ($i = 1; $i <= 6; $i++) {
+      $spaces .= $space;
+  }
+  $tabs = $spaces;
+  for ($i = 1; $i <= $level; $i++) {
+      $tabs .= $spaces;
+  }
+  $output = "Array" . $newline . $newline;
+  foreach($array as $key => $value) {
+      if (is_array($value)) {
+          $level++;
+          $value = listToArray($value, $html, $level);
+          $level--;
+      }
+      $output .= $tabs . "[" . $key . "] => " . $value . $newline;
+  }
+  return $output;
+}
+
+function lastFromUrl($unitString){ // Returns last part of a path
+
+  if(preg_match("/.*\/([^\/]+)$/", $unitString, $matches))
+    return $matches[1];
+  else
+    return false;
+}
+
+function clean($string) {
+   $string = str_replace(' ', '-', $string); // Replaces all spaces with hyphens.
+   $string = preg_replace('/[^A-Za-z0-9\-]/', '', $string); // Removes special chars.
+
+   return preg_replace('/-+/', '-', $string); // Replaces multiple hyphens with single one.
+}
+
+function ajax_wikidata_collection(){
+
+  if(!$collectionid){
+
+    if(isset($_POST['collectionid']))
+      $collectionid = json_decode(urldecode(rawurldecode($_POST['collectionid'])));
+    else if(isset($_GET['collectionid']))
+      $collectionid = json_decode(urldecode(rawurldecode($_GET['collectionid'])));
+
+    if(isset($_POST['itemids']))
+      $itemIds = explode(",", urldecode(rawurldecode($_POST['itemids'])) );
+    else if(isset($_GET['itemids']))
+      $itemIds = explode(",", urldecode(rawurldecode($_GET['itemids'])) );
+
+  }
+
+  if(isset($collectionid) && !is_nan($collectionid) && $itemIds && count($itemIds) > 0){
+
+    $collection = (object) NULL;
+    $collection = node_load($collectionid, NULL, TRUE);
+
+    if($collection){
+
+      //if(!isset($collection->field_samples[LANGUAGE_NONE]))
+      $collection->field_samples[LANGUAGE_NONE] = array();
+
+      foreach ($itemIds as $key => $value) {
+        $collection->field_samples[LANGUAGE_NONE][] = array(
+            'target_id' => getNidFromTitle($value)
+          );
+      }
+
+      node_object_prepare($collection);
+
+      node_save($collection);
+
+      $path = drupal_get_path_alias('node/' . $collection->nid);
+
+      echo '{saved}' . '/' . $path . '/?name=' . $collection->nid . '&ids=' . implode(',', $itemIds);
+
+    } else {
+      echo '{error}collection with id: ' . $collectionid . ' not found on the database.';
+    }
+
+  } else {
+
+    echo '{error}variables missing. I need a collection id and a set of Wikidata ids.';
+
+  }
+
+}
+
+/*function isUtf8( $string ) { 
+    if ( strlen(utf8_decode($string)) == strlen($string) ) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+function isNonLatin($text) {
+    return preg_match('/[^\\p{Common}\\p{Latin}]/u', $text);
+}*/
+
+// MODULE SETUP
+
+function wikidata_import(){
+
+  $module_path = drupal_get_path('module', 'wikidata_importer');
+
+  drupal_add_css($module_path . '/css/importer.css');
+
+  drupal_add_js($module_path . '/js/wikidata_importer.js');
+
+  $params = array(
+    'wikidata_importer' => array(
+      'ajaxUrl' => '/' . $module_path . '/script/importer.php'
+    )
+  );
+
+  drupal_add_js($params, array('type' => 'setting'));
+
+  $build['content'] = array(
+    '#theme' => 'wikidata_importer_theme',
+    '#title' => 'Wikidata importer',
+  );
+
+  $output = drupal_render($build);
+
+  return $output;
+
+}
+
+function wikidata_collection(){
+
+  $module_path = drupal_get_path('module', 'wikidata_importer');
+
+  drupal_add_css($module_path . '/css/importer.css');
+
+  drupal_add_js($module_path . '/js/wikidata_collection.js');
+
+  /*$params = array(
+    'wikidata_importer' => array(
+      'ajaxUrl' => '/' . $module_path . '/script/importer.php'
+    )
+  );
+
+  drupal_add_js($params, array('type' => 'setting'));*/
+
+  $build['content'] = array(
+    '#theme' => 'wikidata_collection_theme',
+    '#title' => 'Wikidata collection',
+  );
+
+  $output = drupal_render($build);
+
+  return $output;
+
+}
+
+function wikidata_importer_theme() {
+  return array(
+    'wikidata_importer_theme' => array(
+      'template' => 'wikidata_importer',
+      'variables' => array('title' => NULL),
+    ),
+    'wikidata_collection_theme' => array(
+      'template' => 'wikidata_collection',
+      'variables' => array('title' => NULL),
+    ),
+  );
+}

@@ -1,0 +1,4 @@
+name = Genealogy display
+description = Show genealogy for a given dataset
+core = 7.x
+version = "7.x-1.0"

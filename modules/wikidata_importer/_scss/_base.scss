@@ -1,0 +1,80 @@
+@import 'compass';
+
+
+$m: 1em;
+
+// COMPASS
+
+$experimental-support-for-svg: true;
+
+$color: #d8848d;
+$link: #1f6aaa;
+$lighter: #efefef;
+$light: #d9d9d9;
+$grey: #999;
+$dark: #666;
+$darker: #222;
+
+$magna: "only screen and (min-width : 1800px)";
+$mega: "only screen and (min-width : 1500px)";
+$huge: "only screen and (min-width : 1200px)";
+$desktop: "only screen and (min-width : 992px)";
+$tablet: "only screen and (min-width : 680px)";
+$smart: "only screen and (min-width : 480px)";
+
+$mini: "only screen and (max-width : 300px)";
+
+@media #{$desktop} { }
+
+//$colors: ($color, #d9b27d, #8ca6ed, #9bd08f, #c7d676, #e09281, #9bd08f, #cd83db, #71cea2, #998cdd, #91a7c6, #c39aab, #c7cc87, #ddab8c, #8ac38a, #a28dbe, #91c3c1, #938678, #af8fa0, #cdd0be);
+
+$colors: ($color, #d4cea1, #6a87ba, #9775bd, #dca693, #9ac084, #84c2c6, #ca87cc, #736cb8, #7ab180);
+
+$new-list: prepend($colors, a);
+
+// FONTS
+
+$font-size:     14px;
+$font-min:      11px;
+$font-micro:    9px;
+$font-small:    80%;
+$font-medium:   85%;
+$font-high:     130%;
+$font-big:      150%;
+$font-huge:     500%;
+
+//@include font-face('Icons', font-files("icons/ceronocero.eot", "icons/ceronocero.woff", "icons/ceronocero.ttf", "icons/ceronocero.svg"));
+//@include font-face('IconsTL', font-files("icons/timeline.eot", "icons/timeline.woff", "icons/timeline.ttf", "icons/timeline.svg"));
+
+$font: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+$font2: Georgia, "Times New Roman", Times, serif;
+$font3: "Monotype Corsiva", "Bradley Hand ITC", "Tempus Sans", "French Script MT", "Comic Sans MS", cursive;
+$font4: "Impact", "Verdana", sans-serif;
+$font5: 'Comic Sans MS', cursive;
+$font6: "Verdana", "Arial", sans-serif;
+
+//
+
+%clear{
+    clear: both;
+    &:after, &:before{
+        content: '';
+        display: block;
+        clear: both;
+    }
+}
+
+%cover{
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+%unselectable{
+    user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -o-user-select: none;
+}

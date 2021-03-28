@@ -1,0 +1,572 @@
+@import "compass/reset";
+@import "base";
+
+@import "ui/*.png";
+@import "icons/*.png";
+
+$gap: 50px;
+$gaps: 40px;
+$text: #060606;
+
+$tl-ease: cubic-bezier(0.71,-0.54, 0.42, 1.54);
+//$tl-ease: cubic-bezier(0, 0, 1, 1);
+$tl-ease: cubic-bezier(.34,.13,.68,.92);
+$tl-speed: .4s;
+
+@import url('https://fonts.googleapis.com/css?family=Roboto+Condensed:400,700');
+
+%transition{
+    @include transition(all $tl-ease $tl-speed);
+    //@include transition(all cubic-bezier(.79,.1,.21,.9) .7s);
+}
+%fast{
+    @include transition(all .2s);
+}
+%unselectable{
+    user-drag: none; 
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+} 
+%undraggable{
+    user-drag: none; 
+    user-select: none;
+    -webkit-user-drag: none;
+} 
+%antialias{
+    /*-webkit-font-smoothing:antialiased;
+    -webkit-backface-visibility:hidden; */
+}
+
+//
+
+html {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+*, *:before, *:after {
+    -webkit-box-sizing: inherit;
+    -moz-box-sizing: inherit;
+    box-sizing: inherit;
+}
+
+.table{
+    display: table;
+    
+    .td{
+        display: table-cell;
+        vertical-align: middle;
+    }
+}
+
+//
+
+body{
+    background: white;
+    color: $text;
+}
+
+.hidden{
+    display: none !important;
+}
+    
+@each $id, $color in $colors {
+    #{unquote('.cat-#{$id}')}{
+
+        //&.bg, &.c-item:after, &.c-item:before{
+        &:before{
+            background: $color;
+        }
+        
+        .tmn-timespan &{
+            
+            &:before{
+            
+                background: none;
+
+                $color1: rgba($color, 1);
+                $color2: rgba($color, 0);
+                @include background-image(linear-gradient(to right, $color1, $color2));
+                
+            }
+        }
+        
+        //}
+        /*&.bg{
+             &:hover{
+                 background-color: lighten($color, 5);
+            }
+        }*/
+        &.c-item{
+            
+            //color: $color;
+            
+            &.unactive{
+                &:after, &:before{
+                    background: $light;
+                }
+            }
+            &:hover{
+                border-color: $color;
+                
+                &:after, &:before{
+                    background: $color;
+                }
+            }
+            &.active{
+                background: $color;
+                border-color: $color;
+                //color: $darker !important;
+                
+                &:after, &:before{
+                    background: darken($color, 20);
+                }
+            }
+        }
+    }
+}
+
+@import "_timeline_cloud/layout";
+@import "_timeline_cloud/nodes";
+@import "_timeline_cloud/mindmap";
+@import "_timeline_cloud/monad-detail";
+
+//
+
+.mon{
+    @extend %antialias;
+    position: absolute;
+    top: 0;
+    left: 0;
+    
+    &.animate{
+        @extend %transition;
+        
+        .tx{
+             @extend %transition;
+        }
+        
+        .bg{
+             @extend %transition;
+        }
+        
+        .pic{
+             @extend %transition;
+        }
+        
+        .circ{
+             @extend %transition;
+        }
+    }
+    
+    .pic{
+        position: absolute;
+        width: 100px;
+        height: 100px;
+        display: block;
+        @include transform-origin(0, 0);
+        
+        .pic-inner{
+            position: absolute;
+            overflow: hidden;
+            border-radius: 50%;
+            left: 6px;
+            right: 6px;
+            top: 6px;
+            bottom: 6px;
+        }
+        img{
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            @include transform(translate(-50%, -50%));
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+        }
+    }
+    
+    .tx{
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        white-space: nowrap;
+        font-size: 20px;
+        top: 0;
+        left: 0;
+        z-index: 2;
+        @include transform-origin(0, 0);
+        cursor: pointer;
+        
+        .tx-inner{
+            position: absolute;
+            top: 0;
+            @include transform(translate(0%, -50%));
+            left: 3px;
+            
+            .tx-val{
+                position: relative;
+                z-index: 3;
+            }
+        }
+    }
+    .bg{
+        position: absolute;
+        width: 100px;
+        height: 100px;
+        top: 50%;
+        left: 0;
+        @include transform-origin(0, 0);
+        min-width: 3px;
+        z-index: -1;
+        overflow: hidden;
+        //@include border-radius(80px);
+        
+        .cat{
+            position: absolute;
+            z-index: -1;
+            height: 100%;
+            width: 100%;
+            
+            &:before{
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                right: 0;
+                bottom: 0;
+            }
+        }
+    }
+    
+    .circ{
+        position: absolute;
+        width: 100px;
+        height: 100px;
+        top: 0;
+        left: 0;
+        @include transform-origin(0, 0);
+        min-width: 3px;
+        z-index: -1;
+        overflow: hidden;
+        @include border-radius(0 80px 80px 80px);
+        
+        .cat{
+            position: absolute;
+            z-index: -1;
+            height: 100%;
+            width: 100%;
+            
+            &:before{
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                right: 0;
+                bottom: 0;
+            }
+        }
+    }
+    
+    @for $i from 0 through 15 {
+            
+        #{unquote('&.lys-#{$i}')}{
+
+            .circ .cat{
+
+                $bgHeight:  100% / $i;
+
+                height: $bgHeight;
+
+                @for $k from 1 through $i {
+
+                    $j: $k - 1;
+
+                    #{unquote('&:nth-child(#{$k})')}{
+                        top: $bgHeight * $j;
+                    }
+                }
+            }
+        }
+    }
+}
+
+.guide{
+    @extend %antialias;
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    
+    &.animate{
+        @extend %transition;
+    }
+    
+    &:after{
+        content: '';
+        position: absolute;
+        margin-left: -.5px;
+        width: 1px;
+        left: 0;
+        top: 0;
+        height: 100%;
+        background: #d9d9d9;
+    }
+    
+    .tx{
+        position: absolute;
+        width: 100px;
+        margin-left: -50px;
+        text-align: center;
+        padding: $m/2 0;
+        font-size: 10px;
+        
+        &.tx-1{
+            bottom: 100%;
+            font-size: 10px;
+            padding: $m/4;
+            display: none;
+        }
+        &.tx-2{
+            top: 100%;
+            
+            @media #{$desktop} {
+                font-size: 100%;
+            }
+        }
+    }
+}
+
+.special{
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: 0;
+    cursor: pointer;
+    
+    &.animate{
+        @extend %transition;
+        
+        .bg, .tx{
+             @extend %transition;
+        }
+    }
+    
+    .bg{
+        position: absolute;
+        width: 100px;
+        height: 100%;
+        top: 0;
+        left: 0;
+        @include transform-origin(0, 0);
+        min-width: 3px;
+        z-index: -1;
+        
+        span{
+            position: relative;
+        }
+        
+        background: #efefef;
+    }
+    
+    .tx{
+        line-height: $gaps;
+        position: absolute;
+        white-space: nowrap;
+        font-size: 11px;
+        width: 200px;
+        text-align: center;
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        
+        sup{
+            vertical-align: top;
+            font-size: 9px;
+            display: inline-block;
+            text-transform: lowercase;
+            margin-left: 1em;
+        }
+        
+        span{
+            position: relative;
+            z-index: 3;
+        }
+    }
+    
+    @each $id, $color in $colors {
+        #{unquote('&.color-#{$id}')}{
+            
+            .bg{
+                background: desaturate(darken($color, 10), 40);
+            }
+            
+            &:hover .bg{
+                background: desaturate(darken($color, 10), 10);
+            }
+        }
+    }
+}
+
+.cat-button{
+    @extend %undraggable;
+    
+    padding: .3em .5em;
+    margin: .2em .1em;
+    display: inline-block;
+    line-height: 1.1;
+    @include border-radius(2px);
+    position: relative;
+    z-index: 2;
+    overflow: hidden;
+    //border: 1px solid white;
+    @extend %fast;
+    vertical-align: top;
+    
+    //@extend %unselectable;
+    
+    @media #{$desktop} {
+        &:hover{
+//            border-color: $dark;
+//            @include box-shadow(0 0 1.5px rgba(black, .8));
+        }
+    }
+    
+    &.active{
+        //border-color: $dark;
+        //@include box-shadow(0 0 1.5px rgba(black, .8));
+    }
+
+    sup{
+        vertical-align: top;
+        font-size: 10px;
+    }
+    
+    .bg{
+        display: block;
+        position: absolute;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: -1;
+        
+        &:before{
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            
+            @extend %fast;
+        }
+    }
+    
+    .timeline-categories-1 &{
+        .bg{
+            //margin: 0 .2em;
+            //margin-left: $m;
+        }
+    }
+    .timeline-categories-2 &{
+        .bg{
+            //margin: 0 .2em;
+            //margin-right: $m;
+        }
+    }
+    
+    &.unactive{
+        color: $shade;
+        
+        .bg{
+            &:before{
+                background: $light !important;
+            }
+        }
+        
+        &:hover{
+            color: $dark;
+            
+            .bg{
+                &:before{
+                    //background: $dark !important;
+                }
+            }
+        }
+    }
+}
+
+//
+
+.timeline-tools{
+    position: relative;
+    text-align: right;
+    padding-left: $m;
+    width: 1em;
+    padding-top: .8em;
+}
+
+.menu-bt{
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    @include ui-sprite('hamburguer');
+    z-index: 3;
+    position: relative;
+    
+    &.visible{
+        @include ui-sprite('hamburguer-close');
+    }
+}
+
+.timeline-menu{
+    position: fixed;
+    z-index: 3;
+    background: white;
+    @include box-shadow(0 1px 10px rgba(black, .4));
+    text-align: left;
+    overflow: hidden;
+    overflow-y: auto;
+    display: none;
+    
+    left: 2em;
+    right: 2em;
+    top: 2em;
+    bottom: 2em;
+    
+    &.visible{
+        display: block;
+    }
+    
+    @media #{$desktop} {
+        position: absolute;
+        max-height: 60vh;
+        width: 400px;
+        right: 0;
+        top: 100%;
+        
+        bottom: auto;
+        left: auto;
+    }
+}
+
+.orphans{
+    padding: 1em;
+}
+
+.velo{
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(22,22,22,.9);
+    z-index: 3;
+}

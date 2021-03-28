@@ -1,0 +1,218 @@
+.gen-mindmap-shell{
+    padding: 0;
+    margin: 0 0 $m;
+    display: inline;
+}
+
+.gen-mindmap{
+
+    font-size: 13px;
+    position: relative;
+
+    .gen-mindmap-wrap{
+        
+    }
+    
+    .mindmap-content{
+        
+        h3{
+            font-size: 120%;
+            margin: 1em .5em 0;
+            display: inline-block;
+        }
+    }
+     
+    .mindmap-branch{
+        
+        margin: $m*2 0;
+        
+        .mindmap-set-wrap{
+            @extend %clear;
+            
+            @media #{$tablet} {
+                //margin-right: 120px;
+            }
+        }
+        .mindmap-set{
+            overflow: hidden;
+        }
+    
+        label{
+            clear: left;
+            margin: $m/2 $m;
+            font-weight: bold;
+            line-height: 1;
+            width: 30%;
+            
+            @media #{$tablet} {
+                float: left;
+                text-align: right;
+            }
+
+            &.c-item{
+                color: $darker;
+                
+            }
+        }
+
+        &.mindmap-branch-a{
+            label{
+                display: none;
+            }
+        }
+        
+        &.mindmap-branch-c{
+            
+            .mindmap-set-wrap{
+                
+                @media #{$tablet} {
+                    text-align: right;
+                    //margin-right: 0;
+                }
+            }
+            
+            label {
+                @media #{$tablet} {
+                    float: right;
+                    text-align: left;
+                }
+            }
+        }
+    }
+    
+    .mind-item{
+        display: inline-block;
+    }
+
+    .mindmap-item{
+        
+        display: inline-block;
+        padding: $m/2 $m/2;
+
+        a{
+            //@extend %underline;
+            color: $link;
+        }
+        
+        &.see-more, &.see-less{
+            
+            a{
+                color: $darker;
+            }
+        }
+    }
+    
+    .mindmap-set .see-less{
+        display: none;
+    }
+    .mindmap-set.expanded .see-less{
+        display: block;
+    }
+    .mindmap-set.expanded .see-more{
+        display: none;
+    }
+}
+
+%underline{
+    position: relative;
+    text-decoration: none;
+    
+    &:after{
+        content: '';
+        position: absolute;
+        left: 1%;
+        bottom: -$m/8;
+        right: 1%;
+        height: 1px;
+        background: $link;
+    }
+    
+    &:hover{
+        &:after{
+            display: none;
+        }
+    }
+}
+
+.site-menu{
+    @extend %clear;
+    background: #efefef;
+    border-bottom: 1px solid #d9d9d9;
+}
+
+.w-search-bar{
+    padding: 1em;
+
+    input{
+        padding: .6em;
+        line-height: 1;
+        font-size: 13px;
+        color: black;
+        border: none;
+        background: white;
+        width: 100px;
+        @include transition(all .2s);
+        @include box-shadow(inset 0 1px 1px rgba(black, .3));
+        border: 1px solid $link;
+        @include border-radius(2em);
+
+        &:focus{
+            background: white;
+            width: 140px;
+        }
+
+        @include input-placeholder {
+            color: #999;
+        }
+    }
+    button{
+        margin-left: $m/2;
+        padding: .4em;
+        border: none;
+        height: 16px;
+        width: 16px;
+        vertical-align: middle;
+        cursor: pointer;
+        background-color: transparent;
+        @include ui-sprite('search');
+    }
+}
+.w-menu{
+    
+    ul.menu{
+        padding-top: .5em;
+    }
+    li{
+
+        a{
+            display: block;
+            padding: .5em 0;
+            margin: 0 1em;
+            color: $link;
+            border-bottom: 1px solid $link;
+            font-size: 110%;
+            @include transition(all .2s);
+            
+            &:hover{
+                padding-left: .2em;
+                //border-bottom-color: transparent;
+                //background: lighten($link, 10);
+            }
+        }
+    }
+}
+
+.logged-in{
+    .w-menu{
+        .anon{
+            display: none;
+        }
+    }
+}
+.not-logged-in{
+    .w-menu{
+        .admin{
+            display: none;
+        }
+    }
+}

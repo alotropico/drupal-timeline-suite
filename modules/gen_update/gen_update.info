@@ -1,0 +1,12 @@
+name = Gen Update
+description = Adds an administrative tool for node updating.
+core = 7.x
+configure = admin/content/gen_update
+
+files[] = gen_update.admin.inc
+files[] = gen_update.module
+
+; Information added by Drupal.org packaging script on 2014-11-08
+version = "7.x-1.3"
+core = "7.x"
+project = "gen_update"

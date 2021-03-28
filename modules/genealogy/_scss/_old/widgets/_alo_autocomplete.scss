@@ -1,0 +1,161 @@
+.field_input{
+    position: relative;
+    line-height: 1;
+    min-width: 300px;
+
+    &:before{
+        @extend %icon;
+        display: inline-block;
+        margin-left: $m*0.75;
+        position: absolute;
+        right: 0;
+        color: rgba(white, .7);
+        z-index: -1;
+    }
+
+    input{
+        font-family: $font;
+        font-size: $font-medium;
+        width: 100%;
+        padding: 0 0 $m/2;
+        padding-right: $m*1.5;
+        border-bottom: 1px solid lighten($gloom, 20);
+        background: none;
+        color: white;
+        display: block;
+
+        &:focus{
+            border-color: white;
+        }
+        @include input-placeholder {
+            color: rgba(white, .9);
+            font-style: normal;
+        }
+    }
+    
+    &.theme_box{
+        
+        &:before{
+            top: $m/2;
+            right: $m/2;
+        }
+        input{
+            padding: $m/2;
+            padding-right: $m*1.5;
+            border: 1px solid lighten($gloom, 20);
+            &:focus{
+                border-color: white;
+            }
+        }
+    }
+    
+    .tag{
+        font-size: $font-medium;
+        position: absolute;
+        top: 0;
+        height: 100%;
+        left: 0;
+        right: $m*1.5;
+        background: $yellow;
+        padding: $m/2 $m/2 0;
+        @include border-radius(5px);
+        cursor: pointer;
+        color: black;
+        overflow: hidden;
+        
+        &:hover{
+            background: darken($yellow, 10);
+        }
+        
+        &:before{
+            @extend %icon;
+            content: '\ea0f';
+            float: right;
+            margin-left: $m/2;
+            font-size: $font-small;
+            //text-shadow: 0 1px 1px rgba(black,.3);
+        }
+    }
+    
+    &.tagged{
+        input{
+            border: none;
+            @extend %unselectable;
+        }
+    }
+
+    .options_list{
+        position: absolute;
+        top: 100%;
+        z-index: 3;
+        background: white;
+        left: 3px;
+        right: 3px;
+        //padding: $m/4;
+        font-size: $font-medium;
+        @include box-shadow(0 1px 5px rgba(black, .6));
+
+        .item_list{ 
+            display: block;
+            padding: $m/2;
+            font-size: $font-medium;
+            &:after{
+                @extend %icon;
+                float: right;
+                content: '\e9cf';
+            }
+            &.selected{
+                background: $cream;
+            }
+        }
+        
+        
+    }
+    
+    &.invert{
+        .options_list{
+            top: auto;
+            bottom: 100%;
+            @include box-shadow(0 -1px 5px rgba(black, .6));
+        }
+    }
+
+    &.field_type_collections{
+        &:before{
+            content: '\e986';
+        }
+        .options_list{
+            .item_list{
+                &:after{
+                    content: '\e9cf';
+                }
+            }
+        }
+    }
+
+    &.field_type_topics{
+        &:before{
+            content: '\e936';
+        }
+        .options_list{
+            .item_list{
+                &:after{
+                    content: '\ea0a';
+                }
+            }
+        }
+    }
+
+    &.field_type_filters{
+        &:before{
+            content: '\ea5b';
+        }
+        .options_list{
+            .item_list{
+                &:after{
+                    content: '\ea5b';
+                }
+            }
+        }
+    }
+}

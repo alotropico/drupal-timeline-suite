@@ -1,0 +1,898 @@
+<?php
+
+function lists_Menu() {
+
+  $items = array();
+
+  $items['test/lists'] = array(
+    'title' => 'Get nodes',
+    'description' => '',
+    'page callback' => 'get_lists',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+    
+  return $items;
+}
+
+function ajax_lists() {
+  echo get_lists($_GET['id']);
+}
+
+function get_lists($id, $filters) {
+
+  $ret = array(
+      'vars' => array(
+          'tao' => array(),
+          'timely' => array(),
+          'geotime' => array(),
+          'overtimely' => array(),
+          'geovertimely' => array(),
+          'geo' => array(),
+          'qty' => array(),
+          'tax' => array(),
+        ),
+    );
+
+  $topics = $id;
+
+  if (strpos($topics, '+') !== false)
+    $topics = explode('+',$topics);
+  elseif (strpos($topics, ',') !== false)
+    $topics = explode(',',$topics);
+  elseif ($topics)
+    $topics = array($topics);
+  else
+    $topics = array(false);
+
+  $countTopics = count($topics);
+
+  // EACH NODE
+
+  foreach ($topics as $topic) {
+
+    // MAIN NODE
+
+    if($topic){
+      $loadTao = entity_load('node', array($topic));
+      $tao = $loadTao[$topic];
+    }
+
+    if(isset($tao)){
+
+      if(isset($filters['start']))
+        $start = $filters['start'];
+      elseif(isset($tao->field_start[LANGUAGE_NONE][0]['year']))
+        $start = $tao->field_start[LANGUAGE_NONE][0]['year'];
+
+      if(isset($filters['end']))
+        $end = $filters['end'];
+      elseif(isset($tao->field_end[LANGUAGE_NONE][0]['year']))
+        $end = $tao->field_end[LANGUAGE_NONE][0]['year'];
+
+      // if(!isset($end) && isset($start))
+      //   $start = NULL;
+
+      if(!isset($filters['start']) && !isset($filters['end']) && isset($start) && isset($end)){
+        $dif = round($end - $start);
+        if($dif < 50) $dif = 50;
+        $start -= $dif;
+        $end += $dif;
+      } elseif(isset($start) && !isset($end))
+        $start -= 75;
+    }
+
+    // unset($start);
+    // unset($end);
+
+    $ret['vars']['tao'][] = $topic;
+
+    if(!isset($start))
+      $start = NULL;
+    if(!isset($end))
+      $end = NULL;
+
+    // get items (monads & relations)
+
+    $items = doQuery($topic, 'nochilds', $start, $end, 1200);
+
+    if(count($items) < 220){
+      $items = array_merge($items, doQuery($topic, 'childs', $start, $end, 400));
+    }
+
+    if(count($items) < 60){
+      $items = array_merge($items, doQuery($topic, '', $start, $end, 400));
+    }
+
+    foreach ($items as $selfKey => $it) {
+
+      if(isset($it['rel'])) /*&& ($it['snack'] == 'timely' || $it['snack'] == 'geotime')*/ {
+
+        foreach ($items as $broKey => $bro) { // remove repeated properties
+
+          if($it['id'] < $bro['id'] && isset($it['rel']) && isset($bro['rel'])){
+
+            //if(count(array_diff(array_merge($it['rel'], $bro['rel']), array_intersect($it['rel'], $bro['rel']))) === 0) {
+
+            if($bro['rel'][0] == $it['rel'][0] && isset($it['rel'][2]) && isset($bro['rel'][2]) && $bro['rel'][2] == $it['rel'][2]){
+
+              // Remove relations with the same endpoints
+              $items[$broKey]['snack'] = 'exclude';
+
+            } else if((isset($it['rel'][2]) && $it['rel'][2] == $bro['rel'][0]) && (isset($bro['rel'][2]) && $bro['rel'][2] == $it['rel'][0])){
+
+              // Remove inverse relations
+              // primary has priority
+
+              if($it['rel'][0] == $topic)
+                $items[$broKey]['snack'] = 'exclude';
+              else
+                $items[$selfKey]['snack'] = 'exclude';
+
+            // } else if(false){
+
+            //   // Multi property mode
+            //   // UNACTIVE
+
+            //   if( ($bro['snack'] == 'timely' || $bro['snack'] == 'geotime')){
+
+            //     // elimino repetidos y almaceno
+            //     if(isset($items[$broKey]['prop'][0]) /*&& $items[$broKey]['prop'][0] == $it['prop'][0]*/){
+            //       $items[$selfKey]['prop'][] = $items[$broKey]['prop'][0];
+            //       $it['prop'][] = $items[$broKey]['prop'][0];
+
+            //       $items[$broKey]['snack'] = 'exclude';
+            //     }
+            //   }
+
+            // }elseif(isset($it['target']) && $it['target'] == $bro['id']){
+
+            //    // remove nodes already present on a relation
+
+            //   if($bro['snack'] == 'timely' || $bro['snack'] == 'geotime')
+            //     $items[$broKey]['snack'] = 'exclude';
+            //     break;
+
+            //   }elseif($bro['snack'] == 'geotime'){
+            //     $items[$broKey]['snack'] = 'geo';
+            //   }
+            }
+          }
+        }
+      }
+
+      // if an item has property asigned
+      // add property to categories
+
+    }
+
+    // get categories
+
+    $cats = array();
+
+    foreach ($items as $selfKey => $it) {
+      if(isset($it['prop']) && ($it['snack'] == 'timely' || $it['snack'] == 'geotime' /*|| $it['snack'] == 'geo'*/ || $it['snack'] == 'geovertimely')){
+        foreach ($it['prop'] as $val) {
+            $cats[] = $val;
+        }
+      }
+    }
+
+    // sort categories
+
+    $catSelection = array_count_values($cats);
+    $catArray = array();
+
+    foreach ($catSelection as $propertyId => $qtyTargets) {
+
+      $catArray[] = array(
+          $propertyId,
+          $qtyTargets,
+        );
+    }
+
+    usort($catArray, function($a, $b){
+        return $a[1] > $b[1];
+    });
+
+    // get categories snack
+
+    foreach ($items as $itk => $it) {
+
+      $is1 = isset($catSelection[$it['id']]);
+      $is2 = isset($catSelection[ 'A' . $it['id']]);
+
+      if( $is1 || $is2 ){
+        
+        if( $is1 && $is2 ){
+
+          $clone = $it;
+          $clone['id'] = 'A' . $clone['id'];
+
+          $items[] = $clone;
+
+        } else if( !$is1 && $is2 ){
+          $items[$itk]['id'] = 'A' . $it['id'];
+        }
+
+      }
+    }
+
+    // save items
+
+    foreach ($items as $it) {
+
+      $it = itemForFront($it, $catSelection, $catArray, $topic);
+
+      $it = $it[0];
+
+      $snack = $it['snack'];
+
+      if($snack != 'exclude'){ 
+
+        if(!isset($ret{$snack}))
+          $ret{$snack} = array();
+
+        $ret{$snack}{$it['id']} = $it;
+
+      }
+    }
+  }
+
+  // dpm($catSelection);
+
+  // dpm($ret);
+
+  return json_encode($ret);
+}
+
+function itemForFront($it, $catSelection, $catArray, $topic){
+
+  $snack = $it['snack'];
+
+  if( $topic == $it['id'] ){
+
+    $css = 'cat-tao';
+    $it['it_css'] = 'tao';
+
+  } elseif( isset($it['prop']) ){
+
+    $css = '';
+
+    foreach ($it['prop'] as $val) {
+      if(isset($catSelection[$val])){
+
+        if($css)
+          $css .= ' cat-' . getPlaceFromArray($catArray, $val)[0];
+        else
+          $css .= 'cat-' . getPlaceFromArray($catArray, $val)[0];
+      }
+    }
+
+  } elseif( isset($catSelection[$it['id']]) ){
+
+    $hie = getPlaceFromArray($catArray, $it['id']);
+    $css = 'cat-' . $hie[0];
+    $snack = 'cats';
+
+    if(substr($it['id'], 0, 1) === 'A')
+      $it['it_css'] = 'patient';
+    else
+      $it['it_css'] = 'agent';
+
+    $it['hie'] = $hie[1][1];
+
+  } else {
+
+    $css = 'cat-child';
+
+  }
+
+  if(isset($it['s']))
+    $it['s'] = (float)$it['s'];
+
+  if(isset($it['e']))
+    $it['e'] = (float)$it['e'];
+
+  // excludes
+  if($snack != 'cats' && $it['bundle'] == 'monad' && $it['id'] != $topic)
+    $snack = 'exclude';
+
+  if(!isset($it['it_css']))
+    $it['it_css'] = 'default';
+
+  $it['css'] = $css;
+  $it['snack'] = $snack;
+
+  return array($it);
+}
+
+function getPlaceFromArray($ar, $id){
+  foreach ($ar as $key => $val) {
+    if($val[0] == $id)
+      return array($key, $val);
+  }
+
+  return -1;
+}
+
+function doQuery($topic, $mode, $start, $end, $rangeMax){
+  // get relations from main topic
+
+  $ret = array();
+
+  $items_nids = array();
+
+  if($mode == 'nochilds'){
+
+    if($topic)
+      $items_nids[] = $topic;
+
+    $relationsRaw = getRelations($topic, 0, $rangeMax);
+
+  } elseif($mode == 'childs') {
+
+    $relationsRaw = getRelations($topic, 2, $rangeMax);
+
+  } else{
+    $relationsRaw = getRelations($topic, 1, $rangeMax);
+  }
+
+  $rids = array();
+  foreach ($relationsRaw as $rid => $val) {
+    $rids[] = $val->rid;
+  }
+
+  $relations = relation_load_multiple($rids);
+
+  foreach ($relations as $rid => $val) {
+
+    $endpoints = relation_get_endpoints($val);
+
+    $counta = -1;
+
+    foreach ($endpoints['node'] as $endpointId => $endpoint) {
+      if($endpointId != $topic){
+        $counta++;
+        if($counta > -1 || $mode)
+          $items_nids[] = $endpointId;
+      }
+    }
+  }
+
+  // LOAD FULL ENTITIES
+
+  $monads = entity_load('node', array_unique($items_nids));
+  $items = array_merge($relations, $monads);
+
+  foreach ($items as $item) {
+
+    $it = getItemValues($item, $topic, $items, $mode, $start, $end);
+
+    //$snack = $it['snack'];
+
+    if($it['val'])
+      $ret{$it['id']} = $it;
+
+    // if(!isset($ret{$snack}))
+    //   $ret{$snack} = array();
+
+    // $ret{$snack}{$it['id']} = $it;
+
+  }
+
+  return $ret;
+}
+
+function getRelations($topic = 0, $rindex = 0, $rangeMax = 1000){
+
+  $query = new EntityFieldQuery();
+
+  $query->entityCondition('entity_type', 'relation');
+
+  if($topic)
+    $query->fieldCondition('endpoints', 'entity_id', $topic, '=', 0);
+
+  if(is_numeric($rindex)){
+    $query->fieldCondition('endpoints', 'r_index', $rindex, '=', 0);
+
+    // if($rindex == 2)
+    //   $query->fieldCondition('field_name', 'value', '', '=');
+  }
+
+  //$rangeMax = 15;
+
+  $query->fieldOrderBy('field_hierarchy', 'value', 'DESC')
+        ->range(0, $rangeMax)
+        ->addMetaData('account', user_load(1));
+    
+  $results = $query->execute();
+
+  if(isset($results['relation']))
+    return $results['relation'];
+  else
+    return array();
+}
+
+function getItemTime($time){
+  return array(
+    'time' => dateToNumber($time['year'], $time['month'], $time['day']),
+    'precision' => (isset($time['precision']) && $time['precision'] ? $time['precision'] : false),
+    'timetype' => (isset($time['timetype']) && $time['timetype'] ? $time['timetype'] : false),
+  );
+}
+
+function dateToNumber($year, $month, $day){
+
+  $ret = $year;
+
+  if(is_numeric($month) && is_numeric($year)){
+    $ret += round(100 * ($month-1)/12) / 100;
+  
+    if(is_numeric($day)){
+
+      // $days = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+      $days = date('t', mktime(0, 0, 0, $month, 1, $year));
+
+      if(is_numeric($days))
+        $ret += round(10000*($day/$days)/12) / 10000;
+    }
+  }
+
+  return $ret;
+}
+
+function getItemValues($item, $topic, $items, $mode, $start, $end){
+
+  $it = array();
+  $snack = false;
+
+  //
+
+  if(isset($item->field_body[LANGUAGE_NONE]))
+    $it['bod'] = $item->field_body[LANGUAGE_NONE]['0']['value'];
+
+  if(isset($item->field_geolocation[LANGUAGE_NONE]['0']['lat']))
+    $it['geo']['lat'] = $item->field_geolocation[LANGUAGE_NONE]['0']['lat'];
+
+  if(isset($item->field_geolocation[LANGUAGE_NONE]['0']['lng']))
+    $it['geo']['lng'] = $item->field_geolocation[LANGUAGE_NONE]['0']['lng'];
+
+  if(isset($item->field_hierarchy[LANGUAGE_NONE]))
+    $it['hie'] = $item->field_hierarchy[LANGUAGE_NONE]['0']['value'];
+
+  if(isset($item->field_wikipedia_id[LANGUAGE_NONE]))
+    $it['wikipedia'] = $item->field_wikipedia_id[LANGUAGE_NONE]['0']['value'];
+
+  // Item time
+
+  if(isset($item->field_start[LANGUAGE_NONE])){
+    $s = getItemTime($item->field_start[LANGUAGE_NONE][0]);
+
+    $it['s'] = $s['time'];
+    if($s['precision']) $it['s_p']['precision'] = $s['precision'];
+    if($s['timetype']) $it['s_p']['timetype'] = $s['timetype'];
+
+    // if($s['approx'])
+    //   $it['s_approx'] = $s['approx'];
+  }
+
+  if(isset($item->field_end[LANGUAGE_NONE])){
+    $e = getItemTime($item->field_end[LANGUAGE_NONE][0]);
+
+    $it['e'] = $e['time'];
+    if($e['precision']) $it['e_p']['precision'] = $e['precision'];
+    if($e['timetype']) $it['e_p']['timetype'] = $e['timetype'];
+
+    // if($e['approx'])
+    //   $it['e_approx'] = $e['approx'];
+  }
+
+  // if(isset($item->field_end[LANGUAGE_NONE]))
+  //   $it['e'] = $item->field_end[LANGUAGE_NONE][0]['from']['year'];
+
+  // Item bundle
+
+  if(isset($item->nid)) { // is NODE
+
+    $snack = false;
+
+    $it['id'] = $item->nid;
+    $it['bundle'] = 'monad';
+
+    if(isset($item->field_name[LANGUAGE_NONE]) && $item->field_name[LANGUAGE_NONE]['0']['value'])
+      $it['val'] = $item->field_name[LANGUAGE_NONE]['0']['value'];
+    elseif(isset($item->title))
+      $it['val'] = $item->title;
+    else
+      $it['val'] = 'Nid ' . $it['id'];
+
+    $it['path'] = drupal_get_path_alias('node/' . $it['id']);
+
+
+    if($item->field_identifiers){
+
+      $it['ids'] = array();
+
+      foreach($item->field_identifiers[LANGUAGE_NONE] as $idt){
+        $it['ids'][$idt['first']] = $idt['second'];
+      }
+    }
+
+
+    if(/*$mode == 'nochilds' &&*/ $topic != $item->nid) // is not tao
+      $snack = 'exclude';
+
+  } elseif(isset($item->rid)) { // is RELATION
+
+    $it['id'] = 'R' . $item->rid;
+    $it['bundle'] = 'relation';
+    //$it['tao'] = $topic;
+
+    if(isset($item->field_name[LANGUAGE_NONE]) && $item->field_name[LANGUAGE_NONE]['0']['value'])
+      $it['val'] = $item->field_name[LANGUAGE_NONE]['0']['value'];
+
+    else if(isset($item->field_quantity[LANGUAGE_NONE]) && $item->field_quantity[LANGUAGE_NONE]['0']['value']){
+      $it['val'] = $item->field_quantity[LANGUAGE_NONE]['0']['value'];
+
+    } else
+      $it['val'] = '';
+
+    $it['path'] = drupal_get_path_alias('relation/' . $item->rid);
+
+  } else {
+
+    $it['bundle'] = 'und';
+
+  }
+
+  $rawvalue = $it['val'];
+
+  // Item pic
+
+  if(isset($item->field_picture) && isset($item->field_picture[LANGUAGE_NONE]['0']['uri']) && $imgPath = $item->field_picture[LANGUAGE_NONE]['0']['uri']){
+
+      if(endsWith($imgPath, '.svg') || endsWith($imgPath, '.gif'))
+        $it['pic'] = file_create_url($imgPath);
+      else 
+        $it['pic'] = image_style_url('node-mini', $imgPath);
+  }
+
+  // Item endpoints **********************
+
+  if(isset($item->endpoints)){
+
+    if(!$mode){
+
+      if(isset($item->endpoints[LANGUAGE_NONE][1])){
+        $item->endpoints[LANGUAGE_NONE][0] = $item->endpoints[LANGUAGE_NONE][1];
+        //$item->endpoints[LANGUAGE_NONE][1] = array();
+      }
+
+      // if(isset($item->endpoints[2]))
+      //   $item->endpoints[1]
+    }
+
+    $iVals = array(1, 0, 2);
+
+    if($topic == $item->endpoints[LANGUAGE_NONE][0]['entity_id']){ // no childs
+
+      $it['subject'] = $topic;
+
+    } else if($topic == $item->endpoints[LANGUAGE_NONE][1]['entity_id']){ // is property of
+
+      $it['subject'] = $topic;
+
+    } else { // childs
+      $it['target'] = $topic;
+    }
+
+    foreach($iVals as $i){
+      if(isset($item->endpoints[LANGUAGE_NONE][$i]) && $item->endpoints[LANGUAGE_NONE][$i] && $item->endpoints[LANGUAGE_NONE][$i]['entity_id'] != $topic){
+
+        $target = $item->endpoints[LANGUAGE_NONE][$i]['entity_id'];
+
+        $it['rel'] = getArrayField($item->endpoints[LANGUAGE_NONE], 'entity_id');
+
+        // if($mode){
+        if($i == 1)
+          if($topic == $item->endpoints[LANGUAGE_NONE][0]['entity_id'])
+            $it['prop'] = array($target);
+          else
+            $it['prop'] = array('A' . $target);
+
+        else if($i == 0) {
+          $it['target'] = $target;
+        }else{
+          $it['subject'] = $target;
+        }
+        // } else {
+        //   if($i == 0)
+        //     $it['subject'] = $target;
+        //   else if($i == 2)
+        //     $it['target'] = $target;
+        // }
+
+        if(isset($it['prop']))
+          $it['rel'][1] =  $it['prop'][0];
+
+
+        foreach ($items as $brother) { // get label from property
+          if(isset($brother->nid) && $target == $brother->nid){
+
+            //if(isset($brother->field_name[LANGUAGE_NONE]['0']['value'])) {
+
+            if($i == 1){
+              if(isset($brother->field_name[LANGUAGE_NONE]['0']['value']))
+                $propName = $brother->field_name[LANGUAGE_NONE]['0']['value'];
+              else
+                $propName = $brother->nid;
+
+              if($propName){
+
+                if($item->endpoints[LANGUAGE_NONE][0]['entity_id'] == $topic)
+                  $it['label'] = $propName;
+
+                else
+                  $it['suffix'] = $propName;
+              }
+            } else {  // get values from target related entity
+
+              // do not want dates of relations between two other nodes
+              // when tao is the property
+              if(!$mode){
+                unset($it['s']);
+                unset($it['e']);
+              }
+
+              $bro_it = getItemValues($brother, $topic, $items, $mode, $start, $end);
+
+              if(isset($bro_it['val'])){
+                if($it['val'] && $it['val'] != $bro_it['val'])
+                  $it['suffix'] = $bro_it['val'];
+                else
+                  $it['val'] = $bro_it['val'];
+
+              } else if(!$it['val']){
+                $it['val'] = $bro_it['id'];
+
+              }
+
+              $overProps = array('pic', 'geo', 'ids', 'bod', 'wikipedia'/*, 'hie'*/);
+
+              foreach ($overProps as $pr) {
+                if(!isset($it[$pr]) && isset($bro_it[$pr]))
+                  $it[$pr] = $bro_it[$pr];
+              }
+
+              $replaceProps = array('path');
+
+              foreach ($replaceProps as $pr) {
+                if(isset($bro_it[$pr]))
+                  $it[$pr] = $bro_it[$pr];
+              }
+
+              // if(isset($bro_it['ids']))
+              //   dpm($bro_it);
+
+              // if(isset($bro_it->field_identifiers)){
+
+              //   $it['ids'] = array();
+
+              //   foreach($bro_it->field_identifiers[LANGUAGE_NONE] as $idt){
+              //     $it['ids'][$idt['first']] = $idt['second'];
+              //   }
+              // }
+
+              if(!isset($it['s']) && isset($bro_it['s'])){
+
+                  $it['s'] = $bro_it['s'];
+
+                  if(isset($bro_it['s_p']))
+                    $it['s_p'] = $bro_it['s_p'];
+
+                  if(!isset($it['e']) && isset($bro_it['e'])){
+                    $it['e'] = $bro_it['e'];
+
+                    if(isset($bro_it['e_p']))
+                      $it['e_p'] = $bro_it['e_p'];
+                  }
+              }
+
+              if(isset($it['e']) && !isset($it['s']))
+                $it['s'] = $it['e'];
+            }
+
+            break;
+          }
+        }
+      } 
+    }
+  } // End of Item endpoints
+
+  // Item snack & hold
+
+  if($snack /*&& $topic != $it['id']*/){
+    //
+  }elseif(isset($it['s'])){
+
+    // It is beyond the timeline time scope
+    if(isset($start) && $it['s'] < $start || isset($end) && $it['s'] > $end || isset($end) && isset($it['e']) && $it['e'] > $end){
+
+      if(isset($it['geo']))
+        $snack = 'geovertimely';
+      else
+        $snack = 'overtimely';
+
+    } else { // It is on time
+      if($it['bundle'] == 'relation' && $it['val'] && is_numeric($rawvalue))
+        $snack = 'qty';
+      else{
+        if(isset($it['geo']))
+          $snack = 'geotime';
+        else
+          $snack = 'timely';
+      }
+    }
+  } else { // It has no date
+    if(isset($it['geo']))
+      $snack = 'geo';
+    else
+      $snack = 'tax';
+  }
+
+  $it['snack'] = $snack;
+
+  return $it;
+}
+
+function endsWith($haystack, $needle)
+{
+    $length = strlen($needle);
+    if ($length == 0) {
+        return true;
+    }
+
+    return (substr($haystack, -$length) === $needle);
+}
+
+function getArrayField($stack, $prop){
+
+  $ret = array();
+
+  if(is_array($stack)){
+    foreach($stack as $sval) {
+
+      if(isset($sval[$prop]))
+        $ret[] = $sval[$prop];
+    }
+  }
+
+  return $ret;
+}
+
+//
+
+function lists_assets(){
+
+  $module_path = drupal_get_path('module', 'lists');
+
+  //drupal_add_css($module_path . '/css/node.css');
+  drupal_add_css($module_path . '/css/lists.css');
+  //drupal_add_css($module_path . '/css/mindmap.css');
+
+  drupal_add_js($module_path . '/js/openbox.js');
+
+  drupal_add_js($module_path . '/js/interpreter.js');
+  drupal_add_js($module_path . '/js/timeline.js');
+  drupal_add_js($module_path . '/js/geo.js');
+  drupal_add_js($module_path . '/js/mindmap.js');
+  drupal_add_js($module_path . '/js/categories.js');
+  //drupal_add_js($module_path . '/js/qty.js');
+  
+  drupal_add_js($module_path . '/js/datamap/d3.min.js');
+  drupal_add_js($module_path . '/js/datamap/topojson.min.js');
+  //drupal_add_js($module_path . '/js/datamap/datamaps.none.min.js');
+  drupal_add_js($module_path . '/js/datamap/datamaps.world.min.js');
+  //drupal_add_js($module_path . '/js/datamap/dimple.v2.3.0.min.js');
+
+  //drupal_add_js($module_path . '/js/picline.js');
+  //drupal_add_js($module_path . '/js/filters.js');
+  drupal_add_js($module_path . '/js/lists.js');
+}
+
+function lists_node_view($node, $view_mode, $langcode) {
+  
+  if ($view_mode == 'full' && isset($node->type) && $node->type == 'monad') {
+
+    lists_assets();
+
+    $node->content['#attached']['js'][] = array(
+      'data' => array(
+        'lists' => array(
+          'nid' => $node->nid,
+          // 'filters' => array(
+          //   'start' => 1914,
+          //   'end' => 1986
+          // ),
+          'feed' => get_lists($node->nid, array())
+        )
+      ),
+      'type' => 'setting',
+    );
+  }
+}
+function lists_preprocess_node(&$vars) {
+    // dpm($vars['type']); 
+    if(isset($vars['type']) && $vars['type'] == 'monad')
+      $vars['theme_hook_suggestions'][] = 'gen_tpl';
+}
+
+function lists_theme() {
+  return array(
+    'gen_tpl' => array(
+      'template' => 'gen',
+      'variables' => array('title' => NULL),
+    ),
+  );
+}
+
+/*function lists_advanced_search(){
+
+  lists_assets();
+
+  $fltrs = array();
+
+  if(isset($_GET['id']))
+    $nid = $_GET['id'];
+  else
+    $nid = '';
+
+  if(isset($_GET['from']))
+    $fltrs['start'] = intval($_GET['from']);
+
+  if(isset($_GET['to']))
+    $fltrs['end'] = intval($_GET['to']);
+
+  if(isset($_GET['only']))
+    $fltrs['only'] = intval($_GET['only']);
+
+  $params = array(
+    'lists' => array(
+      'nid' => $nid,
+      'filters' => $fltrs,
+      'allData' => get_lists($nid, $fltrs)
+    )
+  );
+
+  drupal_add_js($params, array('type' => 'setting'));
+
+  //
+
+  $tit = '';
+
+  if($nid)
+    $tit .= $nid;
+  else
+    $tit .= 'main events';
+
+  if(isset($fltrs['start']))
+    $tit .= ' from ' . $fltrs['start'];
+
+  if(isset($fltrs['end']))
+    $tit .= ' to ' . $fltrs['end'];
+
+  $title = t('Timeline of') . ' ' . $tit;
+
+  $build['tl'] = array(
+    '#theme' => 'gen_tpl',
+    '#title' => $title,
+  );
+  // $build['tl']['#attached']['library'][] = array('system', 'ui.accordion');
+  // $build['tl']['#attached']['js'][] = array('data' => '(function($){$(function() { $("#accordion").accordion(); })})(jQuery);', 'type' => 'inline');
+
+  $output = drupal_render($build);
+
+  return $output;
+
+}*/

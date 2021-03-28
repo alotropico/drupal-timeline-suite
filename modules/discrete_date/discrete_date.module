@@ -1,0 +1,149 @@
+<?php
+
+function discrete_date_field_info() {
+  return array(
+    // We name our field as the associative name of the array.
+    'discrete_date_fieldset' => array(
+      'label' => t('Discrete date'),
+      'description' => t('Provides discretee date for Genealogy.'),
+      'default_widget' => 'discrete_date_text',
+      'default_formatter' => 'discrete_date_simple_text',
+    ),
+  );
+}
+
+function discrete_date_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+
+  foreach ($items as $delta => $item) {
+    if (!empty($item['year']) && !is_numeric($item['year'])) {
+      $errors[$field['field_name']][$langcode][$delta][] = array(
+        'error' => 'discrete_date_invalid',
+        'message' => t('Value must be a number.'),
+      );
+    }
+    if (!empty($item['precision']) && !is_numeric($item['precision'])) {
+      $errors[$field['field_name']][$langcode][$delta][] = array(
+        'error' => 'discrete_date_invalid',
+        'message' => t('Value must be a number.'),
+      );
+    }
+  }
+}
+
+function discrete_date_field_is_empty($item, $field) {
+
+  if(is_array($item)){
+
+    foreach ($item as $dateItem) {
+      if(!empty($item['year']))
+        return false;
+    }
+  }
+  return true;
+}
+
+function discrete_date_field_formatter_info() {
+  return array(
+    // This formatter just displays the hex value in the color indicated.
+    'discrete_date_simple_text' => array(
+      'label' => t('Simple text-based formatter'),
+      'field types' => array('discrete_date_fieldset'),
+    ),
+  );
+}
+
+function discrete_date_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $element = array();
+
+  foreach ($items as $delta => $item) {
+
+    $printValue = '';
+
+    foreach ($item as $itemKey => $itemValue) {
+      $prep = ($itemKey != 'year' ? ', ' : '');
+      $printValue .= $prep . '<span><strong>' . $itemKey . ':</strong>&nbsp;' . $itemValue . '</span>';
+    }
+
+    $element[$delta] = array(
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#attributes' => array(
+        'style' => '',
+      ),
+      '#value' => $printValue,
+    );
+  }
+
+  return $element;
+}
+
+function discrete_date_field_widget_info() {
+  return array(
+    'discrete_date_text' => array(
+      'label' => t('Discrete date format'),
+      'field types' => array('discrete_date_fieldset'),
+    ),
+  );
+}
+
+function discrete_date_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+
+  $subfields = array(
+    'timetype' => array('Time type', 12, 10, '', 'Wikidata Property ID'),
+    'precision' => array('Precision', 12, 2, '<br>', 'Time Precision 0-14'),
+    'day' => array('Day', 4, 2, '', ''),
+    'month' => array('Month', 4, 2, '', ''),
+    'year' => array('Year', 12, 30, '', ''),
+    );
+
+  $ret = $element; // array();
+
+  foreach($subfields as $field => $vals){
+
+    $value = isset($items[$delta][$field]) ? $items[$delta][$field] : '';
+
+    $widget = $element;
+    $widget['#delta'] = $delta;
+
+    $widget += array(
+      '#type' => 'textfield',
+      '#description' => $vals[4],
+      '#default_value' => $value,
+      '#size' => $vals[1],
+      '#maxlength' => 100,
+      '#prefix' => $vals[3] . '<div style="display: inline-block; margin-right: 2em;">',
+      '#suffix' => '</div>',
+    );
+
+    $widget['#title'] = $vals[0];
+    $widget['#description'] = $vals[4];
+
+    $ret[$field] = $widget;
+
+  }
+
+  $ret['#type'] = 'fieldset';
+
+  return $ret;
+}
+
+function discrete_date_field_widget_error($element, $error, $form, &$form_state) {
+  switch ($error['error']) {
+    case 'discrete_date_invalid':
+      form_error($element, $error['message']);
+      break;
+  }
+}
+
+function discrete_date_menu() {
+  $items['admin/genealogy/discrete_date'] = array(
+    'title' => 'discrete date',
+    'page callback' => '_discrete_date_page',
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+function _discrete_date_page() {
+  return t("Custom discrete date field for Genealogy.");
+}

@@ -1,0 +1,74 @@
+$mapWidth: 628.32px * 0.45;
+
+.hoverinfo{
+    padding: $m/2;
+    background: $darker;
+    font-size: $font-min;
+}
+
+.w-map{
+    //border: 1px solid $light;
+    float: right;
+    position: relative;
+    width: $mapWidth;//502.66px;
+    height: $mapWidth * 0.48233;//242.45px;
+    margin: $m auto 0;
+    background: #5b6f95;
+    //@include box-shadow(0 -1px 0 1px rgba(black, .2));
+    overflow: hidden;
+    //float: right;
+    //@include border-radius(3px);
+    
+    box-shadow: 0 0 8px rgba(black, 0.2);
+    
+    .datamap{
+        circle{
+            stroke: black !important;
+            stroke-width: 1px !important;
+            stroke-opacity: 0.2 !important;
+            fill-opacity: 0.8 !important;
+            fill: darken($light, 10) !important;
+        }
+        path{
+            stroke: black !important;
+            stroke-width: 1px !important;
+            stroke-opacity: 0.2 !important;
+            fill: white !important;
+        }
+        
+        @each $id, $color in $colors {
+            circle, path{
+                #{unquote('&.cat-#{$id}')}{
+                    fill: darken($color, 10) !important;
+                }
+            }
+        }
+        
+        circle{
+            &.unactive{
+                fill-opacity: 0.1 !important;
+            }
+        }
+        
+        path{
+            &.unactive{
+                fill-opacity: 1 !important;
+            }
+        }
+        
+//        @for $k from 0 through 5 {
+//
+//            @for $i from 1 through length($colors) {
+//                $c: nth($colors, $i);
+//                $j: -1 + $i + $k * length($colors);
+//                #{unquote('.cat-#{$j}')}{
+//                    fill: $c !important;
+//                }
+//            }
+//        }
+        
+        .cat-tao{
+            fill: $color !important;
+        }
+    }
+}
